@@ -28,3 +28,5 @@ target("SAIL")
     add_files("exec/**.cpp")
     add_includedirs("include")
     add_links("SAIL_lib")
+
+includes("tests/xmake.lua")
