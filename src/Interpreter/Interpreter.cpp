@@ -9,7 +9,7 @@
 #include "Token/Token.h"
 #include "fmt/format.h"
 
-namespace sail::Intepreter
+namespace sail::Interpreter
 {
     namespace
     {
@@ -129,4 +129,4 @@ namespace sail::Intepreter
         std::cout << value << std::endl;
     }
 
-}  // namespace sail::Intepreter
+}  // namespace sail::Interpreter

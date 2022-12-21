@@ -27,8 +27,6 @@ namespace sail
             }
 
             Interpreter::interpret(*expression);
-
-            printExpression(*expression);
         }
     }  // namespace
 
