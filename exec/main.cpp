@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 
-#include <Interpreter/Interpreter.h>
+#include "EntryPoints/EntryPoints.h"
 
 auto main(const int argc, const char* argv[]) -> int
 {
@@ -14,11 +14,11 @@ auto main(const int argc, const char* argv[]) -> int
 
     if (argc == 2)
     {
-        sail::Interpreter::runFile(argv[1]);
+        sail::EntryPoints::runFile(argv[1]);
     }
     else
     {
-        sail::Interpreter::runPrompt();
+        sail::EntryPoints::runPrompt();
     }
 
     return EXIT_SUCCESS;

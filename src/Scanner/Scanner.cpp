@@ -4,7 +4,7 @@
 
 #include <fmt/format.h>
 
-#include "Errors/Errors.h"
+#include "Errors/ScannerError.h"
 
 namespace sail
 {
@@ -230,8 +230,7 @@ namespace sail
                 }
                 else
                 {
-                    throw SailException(
-                        fmt::format("Unexpected character: {}.", c), _line);
+                    throw ScannerError("Unexpected character", _line);
                 }
         }
     }
@@ -264,7 +263,7 @@ namespace sail
 
         if (isAtEnd())
         {
-            throw SailException("Unterminated string.", _line);
+            throw ScannerError("Unterminated string", _line);
         }
 
         advance();

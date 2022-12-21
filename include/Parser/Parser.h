@@ -4,13 +4,11 @@
 #include <stdexcept>
 #include <vector>
 
-#include "Errors/Errors.h"
 #include "Expressions/Expressions.h"
 #include "Token/Token.h"
 
 namespace sail
 {
-
     class Parser
     {
       public:

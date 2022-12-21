@@ -5,7 +5,7 @@
 
 #include "Parser/Parser.h"
 
-#include "Errors/Errors.h"
+#include "Errors/ParserError.h"
 #include "Expressions/Expressions.h"
 #include "Token/Token.h"
 #include "fmt/format.h"
@@ -20,15 +20,7 @@ namespace sail
 
     auto Parser::parse() -> std::unique_ptr<Expression>
     {
-        try
-        {
-            return expression();
-        }
-        catch (const SailException& e)
-        {
-            std::cerr << e.what() << std::endl;
-            return nullptr;
-        }
+        return expression();
     }
 
     auto Parser::expression() -> std::unique_ptr<Expression>
@@ -199,7 +191,7 @@ namespace sail
             return advance();
         }
 
-        throw SailException {peek(), message};
+        throw ParserError {peek(), message};
     }
 
     void Parser::synchronize()

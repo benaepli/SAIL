@@ -2,8 +2,9 @@
 #include <iostream>
 #include <memory>
 
-#include "Interpreter/Interpreter.h"
+#include "EntryPoints/EntryPoints.h"
 
+#include "Interpreter/Interpreter.h"
 #include "Parser/Parser.h"
 #include "Scanner/Scanner.h"
 
@@ -19,6 +20,13 @@ namespace sail
 
             Parser parser {tokens};
             std::unique_ptr<Expression> expression = parser.parse();
+
+            if (expression == nullptr)
+            {
+                return;
+            }
+
+            Interpreter::interpret(*expression);
 
             printExpression(*expression);
         }

@@ -4,29 +4,10 @@
 #include <string>
 #include <variant>
 
-#include "Token/Token.h"
+#include "Token/LiteralType.h"
 
 namespace sail
 {
-
-    enum class TokenType;
-
-    struct LiteralNull
-    {
-        LiteralNull() = default;
-        explicit LiteralNull(TokenType null);
-    };
-
-    class LiteralType
-        : public std::variant<std::string, double, bool, LiteralNull>
-    {
-      public:
-        using std::variant<std::string, double, bool, LiteralNull>::variant;
-        using std::variant<std::string, double, bool, LiteralNull>::operator=;
-
-        friend auto operator<<(std::ostream& os, const LiteralType& literal)
-            -> std::ostream&;
-    };
 
     enum class TokenType
     {
