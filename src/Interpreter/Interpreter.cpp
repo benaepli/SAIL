@@ -1,50 +1,67 @@
-#include "Interpreter/Interpreter.h"
-
 #include <fstream>
 #include <iostream>
+#include <memory>
+
+#include "Interpreter/Interpreter.h"
+
+#include "Parser/Parser.h"
+#include "Scanner/Scanner.h"
 
 namespace sail
 {
-    Interpreter::Interpreter() { }
+    namespace
+    {
+        void run(const std::string& source)
+        {
+            std::vector<Token> tokens;
+            Scanner scanner {source, tokens};
+            scanner.scanTokens();
+
+            Parser parser {tokens};
+            std::unique_ptr<Expression> expression = parser.parse();
+
+            printExpression(*expression);
+        }
+    }  // namespace
 
     void Interpreter::runFile(const std::string& path)
     {
         std::ifstream stream(path);
         std::string source;
 
-        if (stream.is_open()) {
+        if (stream.is_open())
+        {
             source = std::string((std::istreambuf_iterator<char>(stream)),
                                  std::istreambuf_iterator<char>());
             run(source);
-        } else {
+        }
+        else
+        {
             throw std::runtime_error("Could not open file " + path);
         }
     }
 
     void Interpreter::runPrompt()
     {
-        while (true) {
+        while (true)
+        {
             std::cout << "> ";
             std::string source;
             std::getline(std::cin, source);
 
-            if (source == "exit") {
+            if (source == "exit")
+            {
                 break;
             }
 
-            try {
+            try
+            {
                 run(source);
-            } catch (const std::exception& e) {
+            }
+            catch (const std::exception& e)
+            {
                 std::cout << e.what() << std::endl;
             }
         }
     }
-
-    void Interpreter::run(const std::string& source)
-    {
-        Scanner scanner {source};
-        scanner.scanTokens();
-
-        std::cout << source << std::endl;
-    }
-}
+}  // namespace sail

@@ -2,20 +2,10 @@
 
 #include <string>
 
-#include "Scanner/Scanner.h"
 
-
-namespace sail
+namespace sail::Interpreter
 {
-    class Interpreter
-    {
-    public:
-        Interpreter();
+    void runFile(const std::string& path);
+    void runPrompt();
 
-        void runFile(const std::string& path);
-        void runPrompt();
-
-    private:
-        void run(const std::string& source);
-    };
-}
+}  // namespace sail::Interpreter

@@ -1,39 +1,51 @@
+#include <unordered_map>
+
 #include "Scanner/Scanner.h"
 
-#include "Errors/Errors.h"
 #include <fmt/format.h>
-#include <unordered_map>
+
+#include "Errors/Errors.h"
 
 namespace sail
 {
     // keywords map
-    static const std::unordered_map<std::string_view, TokenType> KEYWORDS{
-        {"class", TokenType::CLASS},
-        {"else", TokenType::ELSE},
-        {"false", TokenType::FALSE},
-        {"for", TokenType::FOR},
-        {"fun", TokenType::FUN},
-        {"if", TokenType::IF},
-        {"let", TokenType::LET},
+    static const std::unordered_map<std::string_view, TokenType> KEYWORDS {
+        {"class", TokenType::eClass},
+        {"else", TokenType::eElse},
+        {"false", TokenType::eFalse},
+        {"for", TokenType::eFor},
+        {"fun", TokenType::eFun},
+        {"if", TokenType::eIf},
+        {"let", TokenType::eLet},
         {"null", TokenType::eNull},
-        {"return", TokenType::RETURN},
-        {"super", TokenType::SUPER},
-        {"this", TokenType::THIS},
-        {"true", TokenType::TRUE},
-        {"while", TokenType::WHILE},
+        {"return", TokenType::eReturn},
+        {"super", TokenType::eSuper},
+        {"this", TokenType::eThis},
+        {"true", TokenType::eTrue},
+        {"while", TokenType::eWhile},
     };
 
-    Scanner::Scanner(std::string source)
-        : _source(std::move(source)) { }
+    Scanner::Scanner(std::string source, std::vector<Token>& tokens)
+        : _source(std::move(source))
+        , _tokens(tokens)
+    {
+    }
 
     auto Scanner::scanTokens() -> std::vector<Token>
     {
-        while (!isAtEnd()) {
+        while (!isAtEnd())
+        {
             _start = _current;
             scanToken();
         }
 
-        _tokens.emplace_back(TokenType::END_OF_FILE, "", "", _line);
+        Token token {
+            .type = TokenType::eEndOfFile,
+            .lexeme = "",
+            .literal = "",
+            .line = _line,
+        };
+        _tokens.push_back(token);
         return _tokens;
     }
 
@@ -49,12 +61,14 @@ namespace sail
 
     auto Scanner::match(char expected) -> bool
     {
-        if (isAtEnd()) {
+        if (isAtEnd())
+        {
             return false;
-}
-        if (_source[_current] != expected) {
+        }
+        if (_source[_current] != expected)
+        {
             return false;
-}
+        }
 
         _current++;
         return true;
@@ -62,17 +76,19 @@ namespace sail
 
     auto Scanner::peek() const -> char
     {
-        if (isAtEnd()) {
+        if (isAtEnd())
+        {
             return '\0';
-}
+        }
         return _source[_current];
     }
 
     auto Scanner::peekNext() -> char
     {
-        if (_current + 1 >= _source.length()) {
+        if (_current + 1 >= _source.length())
+        {
             return '\0';
-}
+        }
         return _source[_current + 1];
     }
 
@@ -84,13 +100,32 @@ namespace sail
     void Scanner::addToken(TokenType type, const std::string& literal)
     {
         std::string const text = _source.substr(_start, _current - _start);
-        _tokens.emplace_back(type, text, literal, _line);
+        Token token {
+            .type = type,
+            .lexeme = text,
+            .literal = literal,
+            .line = _line,
+        };
+        _tokens.push_back(token);
+    }
+
+    void Scanner::addToken(TokenType type, double literal)
+    {
+        std::string const text = _source.substr(_start, _current - _start);
+        Token token {
+            .type = type,
+            .lexeme = text,
+            .literal = literal,
+            .line = _line,
+        };
+        _tokens.push_back(token);
     }
 
     void Scanner::scanToken()
     {
         char c = advance();
-        switch (c) {
+        switch (c)
+        {
             case '(':
                 addToken(TokenType::eLeftParen);
                 break;
@@ -101,49 +136,51 @@ namespace sail
                 addToken(TokenType::eLeftBrace);
                 break;
             case '}':
-                addToken(TokenType::RIGHT_BRACE);
+                addToken(TokenType::eRightBrace);
                 break;
             case ',':
-                addToken(TokenType::COMMA);
+                addToken(TokenType::eComma);
                 break;
             case '.':
-                addToken(TokenType::DOT);
+                addToken(TokenType::eDot);
                 break;
             case '-':
-                addToken(TokenType::MINUS);
+                addToken(TokenType::eMinus);
                 break;
             case '+':
-                addToken(TokenType::PLUS);
+                addToken(TokenType::ePlus);
                 break;
             case ';':
-                addToken(TokenType::SEMICOLON);
+                addToken(TokenType::eSemicolon);
                 break;
             case '*':
-                addToken(TokenType::STAR);
+                addToken(TokenType::eStar);
                 break;
             case '!':
-                addToken(match('=') ? TokenType::BANG_EQUAL : TokenType::BANG);
+                addToken(match('=') ? TokenType::eBangEqual : TokenType::eBang);
                 break;
             case '=':
-                addToken(match('=')
-                    ? TokenType::EQUAL_EQUAL
-                    : TokenType::EQUAL);
+                addToken(match('=') ? TokenType::eEqualEqual
+                                    : TokenType::eEqual);
                 break;
             case '<':
-                addToken(match('=') ? TokenType::LESS_EQUAL : TokenType::LESS);
+                addToken(match('=') ? TokenType::eLessEqual : TokenType::eLess);
                 break;
             case '>':
-                addToken(match('=')
-                    ? TokenType::GREATER_EQUAL
-                    : TokenType::GREATER);
+                addToken(match('=') ? TokenType::eGreaterEqual
+                                    : TokenType::eGreater);
                 break;
             case '/':
-                if (match('/')) {
-                    while (peek() != '\n' && !isAtEnd()) {
+                if (match('/'))
+                {
+                    while (peek() != '\n' && !isAtEnd())
+                    {
                         advance();
-}
-                } else {
-                    addToken(TokenType::SLASH);
+                    }
+                }
+                else
+                {
+                    addToken(TokenType::eSlash);
                 }
                 break;
             case ' ':
@@ -157,36 +194,45 @@ namespace sail
                 string();
                 break;
             case '|':
-                if (match('|')) {
-                    addToken(TokenType::OR);
-                } else {
-                    addToken(TokenType::BITWISE_OR);
+                if (match('|'))
+                {
+                    addToken(TokenType::eOr);
+                }
+                else
+                {
+                    addToken(TokenType::eBitwiseOr);
                 }
                 break;
             case '&':
-                if (match('&')) {
-                    addToken(TokenType::AND);
-                } else {
-                    addToken(TokenType::BITWISE_AND);
+                if (match('&'))
+                {
+                    addToken(TokenType::eAnd);
+                }
+                else
+                {
+                    addToken(TokenType::eBitwiseAnd);
                 }
                 break;
             case '^':
-                addToken(TokenType::BITWISE_XOR);
+                addToken(TokenType::eBitwiseXor);
                 break;
             case '~':
-                addToken(TokenType::BITWISE_NOT);
+                addToken(TokenType::eBitwiseNot);
                 break;
             default:
-                if (isDigit(c)) {
+                if (isDigit(c))
+                {
                     number();
-                } else if (isAlpha(c)) {
-                    identifier();
-                } else {
-                    throw SailException(
-                        fmt::format("Unexpected character: {}.", c),
-                        _line);
                 }
-
+                else if (isAlpha(c))
+                {
+                    identifier();
+                }
+                else
+                {
+                    throw SailException(
+                        fmt::format("Unexpected character: {}.", c), _line);
+                }
         }
     }
 
@@ -207,53 +253,65 @@ namespace sail
 
     void Scanner::string()
     {
-        while (peek() != '"' && !isAtEnd()) {
-            if (peek() == '\n') {
+        while (peek() != '"' && !isAtEnd())
+        {
+            if (peek() == '\n')
+            {
                 _line++;
-}
+            }
             advance();
         }
 
-        if (isAtEnd()) {
+        if (isAtEnd())
+        {
             throw SailException("Unterminated string.", _line);
         }
 
         advance();
 
-        const std::string value = _source.substr(_start + 1, _current - _start - 2);
-        addToken(TokenType::STRING, value);
+        const std::string value =
+            _source.substr(_start + 1, _current - _start - 2);
+        addToken(TokenType::eString, value);
     }
 
     void Scanner::number()
     {
-        while (isDigit(peek())) {
+        while (isDigit(peek()))
+        {
             advance();
-}
-
-        if (peek() == '.' && isDigit(peekNext())) {
-            advance();
-
-            while (isDigit(peek())) {
-                advance();
-}
         }
 
-        addToken(TokenType::NUMBER, _source.substr(_start, _current - _start));
+        if (peek() == '.' && isDigit(peekNext()))
+        {
+            advance();
+
+            while (isDigit(peek()))
+            {
+                advance();
+            }
+        }
+        const double value =
+            std::stod(_source.substr(_start, _current - _start));
+        addToken(TokenType::eNumber, value);
     }
 
     void Scanner::identifier()
     {
-        while (isAlphaNumeric(peek())) {
+        while (isAlphaNumeric(peek()))
+        {
             advance();
-}
+        }
 
         std::string const text = _source.substr(_start, _current - _start);
 
         auto it = KEYWORDS.find(text);
-        if (it != KEYWORDS.end()) {
+        if (it != KEYWORDS.end())
+        {
             addToken(it->second);
-        } else {
-            addToken(TokenType::IDENTIFIER);
+        }
+        else
+        {
+            addToken(TokenType::eIdentifier);
         }
     }
-}
+}  // namespace sail

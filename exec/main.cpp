@@ -3,18 +3,23 @@
 
 #include <Interpreter/Interpreter.h>
 
-int main(const int argc, const char* argv[])
+auto main(const int argc, const char* argv[]) -> int
 {
-    sail::Interpreter interpreter{};
 
-    if (argc > 2) {
+    if (argc > 2)
+    {
         std::cout << "Usage: sail [script]" << std::endl;
-        return 64;
-    } else if (argc == 2) {
-        interpreter.runFile(argv[1]);
-    } else {
-        interpreter.runPrompt();
+        return EXIT_FAILURE;
     }
 
-    return 0;
+    if (argc == 2)
+    {
+        sail::Interpreter::runFile(argv[1]);
+    }
+    else
+    {
+        sail::Interpreter::runPrompt();
+    }
+
+    return EXIT_SUCCESS;
 }

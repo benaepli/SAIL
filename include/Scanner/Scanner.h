@@ -1,42 +1,43 @@
 #pragma once
 
-#include <vector>
 #include <string>
+#include <vector>
 
-#include "Token.h"
+#include "Token/Token.h"
 
 namespace sail
 {
     class Scanner
     {
-    public:
-        explicit Scanner(std::string source);
-        std::vector<Token> scanTokens();
+      public:
+        explicit Scanner(std::string source, std::vector<Token>& tokens);
+        auto scanTokens() -> std::vector<Token>;
 
-    private:
-        inline bool isAtEnd() const;
-        char advance();
-        bool match(char expected);
-        char peek() const;
-        char peekNext();
+      private:
+        inline auto isAtEnd() const -> bool;
+        auto advance() -> char;
+        auto match(char expected) -> bool;
+        auto peek() const -> char;
+        auto peekNext() -> char;
 
         void addToken(TokenType type);
         void addToken(TokenType type, const std::string& literal);
+        void addToken(TokenType type, double literal);
 
         void scanToken();
 
-        static bool isDigit(char c);
-        static bool isAlpha(char c);
-        static bool isAlphaNumeric(char c);
+        static auto isDigit(char c) -> bool;
+        static auto isAlpha(char c) -> bool;
+        static auto isAlphaNumeric(char c) -> bool;
 
         void string();
         void number();
         void identifier();
 
         const std::string _source;
-        std::vector<Token> _tokens;
+        std::vector<Token>& _tokens;
         size_t _start = 0;
         size_t _current = 0;
         size_t _line = 1;
     };
-}
+}  // namespace sail
