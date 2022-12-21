@@ -24,7 +24,7 @@ namespace sail
         }
     }  // namespace
 
-    void Interpreter::runFile(const std::string& path)
+    void EntryPoints::runFile(const std::string& path)
     {
         std::ifstream stream(path);
         std::string source;
@@ -41,7 +41,7 @@ namespace sail
         }
     }
 
-    void Interpreter::runPrompt()
+    void EntryPoints::runPrompt()
     {
         while (true)
         {
