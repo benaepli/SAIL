@@ -1,6 +1,6 @@
 add_rules("mode.debug", "mode.release")
 
-add_requires("fmt", "magic_enum")
+add_requires("fmt", "magic_enum", "unordered_dense")
 
 set_project("SAIL")
 set_version("0.1.0")
@@ -8,9 +8,12 @@ set_languages("c++20")
 
 target("SAIL_lib")
     set_kind("static")
+
     add_files("src/**.cpp")
+    add_headerfiles("include/**.h")
     add_includedirs("include")
-    add_packages("fmt", "magic_enum")
+    
+    add_packages("fmt", "magic_enum", "unordered_dense")
 
     if is_mode("debug") then
         add_defines("SAIL_DEBUG")

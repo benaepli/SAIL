@@ -1,9 +1,12 @@
 #pragma once
 
+#include <vector>
+
 #include "Expressions/Expressions.h"
+#include "Statements/Statements.h"
 
 namespace sail::Interpreter
 {
-    auto evaluate(Expression& expression) -> LiteralType;
-    void interpret(Expression& expression);
+    void execute(Statement& statement);
+    void interpret(std::vector<Statement>& statements);
 }  // namespace sail::Interpreter

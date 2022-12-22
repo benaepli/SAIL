@@ -19,14 +19,9 @@ namespace sail
             scanner.scanTokens();
 
             Parser parser {tokens};
-            std::unique_ptr<Expression> expression = parser.parse();
+            std::vector<Statement> statements = std::move(parser.parse());
 
-            if (expression == nullptr)
-            {
-                return;
-            }
-
-            Interpreter::interpret(*expression);
+            Interpreter::interpret(statements);
         }
     }  // namespace
 

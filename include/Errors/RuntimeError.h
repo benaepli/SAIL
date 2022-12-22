@@ -7,7 +7,7 @@ namespace sail
     class RuntimeError : public std::exception
     {
       public:
-        RuntimeError(Token token, const std::string& message);
+        RuntimeError(const Token& token, const std::string& message);
 
         auto what() const noexcept -> const char* override;
 

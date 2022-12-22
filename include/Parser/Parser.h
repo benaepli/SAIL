@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Expressions/Expressions.h"
+#include "Statements/Statements.h"
 #include "Token/Token.h"
 
 namespace sail
@@ -14,9 +15,14 @@ namespace sail
       public:
         explicit Parser(std::vector<Token>& tokens);
 
-        auto parse() -> std::unique_ptr<Expression>;
+        auto parse() -> std::vector<Statement>;
 
       private:
+        auto statement() -> Statement;
+        auto declaration() -> Statement;
+        auto varDeclaration() -> Statement;
+        auto expressionStatement() -> Statements::Expression;
+
         auto expression() -> std::unique_ptr<Expression>;
         auto equality() -> std::unique_ptr<Expression>;
         auto comparison() -> std::unique_ptr<Expression>;
@@ -33,7 +39,9 @@ namespace sail
         auto isAtEnd() -> bool;
         auto peek() -> Token&;
 
-        auto consume(TokenType tokenType, const std::string& message) -> Token;
+        auto consume(TokenType tokenType) -> Token*;
+        inline auto consume(TokenType tokenType, const std::string& message)
+            -> Token&;
 
         void synchronize();
 

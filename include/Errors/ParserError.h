@@ -7,7 +7,7 @@ namespace sail
     class ParserError : public std::exception
     {
       public:
-        ParserError(Token token, const std::string& message);
+        ParserError(const Token& token, const std::string& message);
 
         auto what() const noexcept -> const char* override;
 

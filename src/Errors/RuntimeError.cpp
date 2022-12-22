@@ -4,7 +4,7 @@
 
 namespace sail
 {
-    RuntimeError::RuntimeError(Token token, const std::string& message)
+    RuntimeError::RuntimeError(const Token& token, const std::string& message)
     {
         _message =
             fmt::format("Runtime error at line {}: {}", token.line, message);

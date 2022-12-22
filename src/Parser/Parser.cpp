@@ -7,6 +7,7 @@
 
 #include "Errors/ParserError.h"
 #include "Expressions/Expressions.h"
+#include "Statements/Statements.h"
 #include "Token/Token.h"
 #include "fmt/format.h"
 
@@ -18,9 +19,58 @@ namespace sail
     {
     }
 
-    auto Parser::parse() -> std::unique_ptr<Expression>
+    auto Parser::parse() -> std::vector<Statement>
     {
-        return expression();
+        std::vector<Statement> statements {};
+
+        while (!isAtEnd())
+        {
+            Statement newStatement = std::move(statement());
+            statements.push_back(std::move(newStatement));
+        }
+
+        return statements;
+    }
+
+    auto Parser::statement() -> Statement
+    {
+        return declaration();
+    }
+
+    auto Parser::declaration() -> Statement
+    {
+        if (match({TokenType::eLet}))
+        {
+            return varDeclaration();
+        }
+
+        return expressionStatement();
+    };
+
+    auto Parser::varDeclaration() -> Statement
+    {
+        Token& name =
+            consume(TokenType::eIdentifier, "Expected identifier after 'let'");
+
+        std::unique_ptr<Expression> initializer {};
+        if (match({TokenType::eEqual}))
+        {
+            initializer = std::move(expression());
+        }
+
+        Token& semicolon =
+            consume(TokenType::eSemicolon,
+                    "Expected semicolon after variable declaration");
+
+        return Statements::Variable {name, std::move(initializer)};
+    }
+
+    auto Parser::expressionStatement() -> Statements::Expression
+    {
+        std::unique_ptr<Expression> newExpression = expression();
+        Statements::Expression newExpressionStatement {
+            std::move(newExpression)};
+        return newExpressionStatement;
     }
 
     auto Parser::expression() -> std::unique_ptr<Expression>
@@ -128,7 +178,7 @@ namespace sail
         if (match({TokenType::eLeftParen}))
         {
             std::unique_ptr<Expression> expr = expression();
-            consume(TokenType::eRightParen, "Expected ')' after expression.");
+            consume(TokenType::eRightParen, "Expected ')' after expression");
             return std::make_unique<Expression>(
                 Expressions::Grouping {std::move(expr)});
         }
@@ -183,15 +233,23 @@ namespace sail
         return _tokens[_current];
     }
 
+    auto Parser::consume(TokenType tokenType) -> Token*
+    {
+        if ((check(tokenType)))
+        {
+            return &advance();
+        };
+        return nullptr;
+    }
+
     auto Parser::consume(TokenType tokenType, const std::string& message)
-        -> Token
+        -> Token&
     {
         if (check(tokenType))
         {
             return advance();
         }
-
-        throw ParserError {peek(), message};
+        throw ParserError(peek(), message);
     }
 
     void Parser::synchronize()

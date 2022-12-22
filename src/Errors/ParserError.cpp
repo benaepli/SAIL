@@ -4,7 +4,7 @@
 
 namespace sail
 {
-    ParserError::ParserError(Token token, const std::string& message)
+    ParserError::ParserError(const Token& token, const std::string& message)
     {
         _message =
             fmt::format("Parse error at line {}: {}", token.line, message);
