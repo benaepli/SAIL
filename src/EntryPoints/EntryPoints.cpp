@@ -21,7 +21,8 @@ namespace sail
             Parser parser {tokens};
             std::vector<Statement> statements = std::move(parser.parse());
 
-            Interpreter::interpret(statements);
+            Interpreter interpreter {};
+            interpreter.interpret(statements);
         }
     }  // namespace
 

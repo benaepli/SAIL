@@ -21,9 +21,12 @@ namespace sail
         auto statement() -> Statement;
         auto declaration() -> Statement;
         auto varDeclaration() -> Statement;
-        auto expressionStatement() -> Statements::Expression;
+        auto blockStatement() -> Statement;
+        auto expressionStatement() -> Statement;
+        auto printStatement() -> Statement;
 
         auto expression() -> std::unique_ptr<Expression>;
+        auto assignment() -> std::unique_ptr<Expression>;
         auto equality() -> std::unique_ptr<Expression>;
         auto comparison() -> std::unique_ptr<Expression>;
         auto term() -> std::unique_ptr<Expression>;

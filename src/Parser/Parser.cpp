@@ -7,6 +7,7 @@
 
 #include "Errors/ParserError.h"
 #include "Expressions/Expressions.h"
+#include "Expressions/VariableExpression.h"
 #include "Statements/Statements.h"
 #include "Token/Token.h"
 #include "fmt/format.h"
@@ -44,6 +45,16 @@ namespace sail
             return varDeclaration();
         }
 
+        if (match({TokenType::eLeftBrace}))
+        {
+            return blockStatement();
+        }
+
+        if (match({TokenType::ePrint}))
+        {
+            return printStatement();
+        }
+
         return expressionStatement();
     };
 
@@ -65,7 +76,20 @@ namespace sail
         return Statements::Variable {name, std::move(initializer)};
     }
 
-    auto Parser::expressionStatement() -> Statements::Expression
+    auto Parser::blockStatement() -> Statement
+    {
+        std::vector<Statement> statements {};
+
+        while (!check(TokenType::eRightBrace) && !isAtEnd())
+        {
+            statements.push_back(std::move(statement()));
+        }
+
+        consume(TokenType::eRightBrace, "Expected '}' after block");
+        return Statements::Block {std::move(statements)};
+    }
+
+    auto Parser::expressionStatement() -> Statement
     {
         std::unique_ptr<Expression> newExpression = expression();
         Statements::Expression newExpressionStatement {
@@ -73,9 +97,38 @@ namespace sail
         return newExpressionStatement;
     }
 
+    auto Parser::printStatement() -> Statement
+    {
+        std::unique_ptr<Expression> newExpression = expression();
+        consume(TokenType::eSemicolon, "Expected semicolon after value");
+        Statements::Print newPrintStatement {std::move(newExpression)};
+        return newPrintStatement;
+    }
+
     auto Parser::expression() -> std::unique_ptr<Expression>
     {
-        return equality();
+        return assignment();
+    }
+
+    auto Parser::assignment() -> std::unique_ptr<Expression>
+    {
+        std::unique_ptr<Expression> expr = equality();
+
+        if (match({TokenType::eEqual}))
+        {
+            Token equals = previous();
+            std::unique_ptr<Expression> value = assignment();
+
+            if (auto* variable = std::get_if<Expressions::Variable>(&*expr))
+            {
+                Token& name = variable->name;
+                return std::make_unique<Expression>(
+                    Expressions::Assignment {std::move(value), name});
+            }
+            throw ParserError(equals, "Invalid assignment target");
+        }
+
+        return expr;
     }
 
     auto Parser::equality() -> std::unique_ptr<Expression>
@@ -175,6 +228,13 @@ namespace sail
             return std::make_unique<Expression>(
                 Expressions::Literal {previous().literal});
         }
+
+        if (match({TokenType::eIdentifier}))
+        {
+            return std::make_unique<Expression>(
+                Expressions::Variable {previous()});
+        }
+
         if (match({TokenType::eLeftParen}))
         {
             std::unique_ptr<Expression> expr = expression();
@@ -182,7 +242,7 @@ namespace sail
             return std::make_unique<Expression>(
                 Expressions::Grouping {std::move(expr)});
         }
-        throw std::runtime_error("Expected expression.");
+        throw ParserError(peek(), "Expected expression");
     }
 
     auto Parser::match(const std::vector<TokenType>& tokenTypes) -> bool

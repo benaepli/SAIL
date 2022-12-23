@@ -18,6 +18,7 @@ namespace sail
         {"if", TokenType::eIf},
         {"let", TokenType::eLet},
         {"null", TokenType::eNull},
+        {"print", TokenType::ePrint},  // Only for testing
         {"return", TokenType::eReturn},
         {"super", TokenType::eSuper},
         {"this", TokenType::eThis},
