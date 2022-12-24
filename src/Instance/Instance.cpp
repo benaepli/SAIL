@@ -1,8 +1,7 @@
 #include <fstream>
 #include <iostream>
-#include <memory>
 
-#include "EntryPoints/EntryPoints.h"
+#include "Instance/Instance.h"
 
 #include "Interpreter/Interpreter.h"
 #include "Parser/Parser.h"
@@ -10,29 +9,24 @@
 
 namespace sail
 {
-    namespace
+
+    Instance::Instance()
+        : _interpreter(new Interpreter())
     {
-        void run(const std::string& source)
-        {
-            std::vector<Token> tokens;
-            Scanner scanner {source, tokens};
-            scanner.scanTokens();
+    }
 
-            Parser parser {tokens};
-            std::vector<Statement> statements = std::move(parser.parse());
+    Instance::~Instance()
+    {
+        delete _interpreter;
+    }
 
-            Interpreter interpreter {};
-            interpreter.interpret(statements);
-        }
-    }  // namespace
-
-    void EntryPoints::runFile(const std::string& path)
+    void Instance::runFile(const std::string& path)
     {
         std::ifstream stream(path);
-        std::string source;
 
         if (stream.is_open())
         {
+            std::string source;
             source = std::string((std::istreambuf_iterator<char>(stream)),
                                  std::istreambuf_iterator<char>());
             run(source);
@@ -43,7 +37,7 @@ namespace sail
         }
     }
 
-    void EntryPoints::runPrompt()
+    void Instance::runPrompt()
     {
         while (true)
         {
@@ -65,5 +59,17 @@ namespace sail
                 std::cout << e.what() << std::endl;
             }
         }
+    }
+
+    void Instance::run(const std::string& source)
+    {
+        std::vector<Token> tokens;
+        Scanner scanner {source, tokens};
+        scanner.scanTokens();
+
+        Parser parser {tokens};
+        std::vector<std::unique_ptr<Statement>> statements = parser.parse();
+
+        _interpreter->interpret(statements);
     }
 }  // namespace sail

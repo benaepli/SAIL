@@ -20,25 +20,25 @@ namespace sail
     {
     }
 
-    auto Parser::parse() -> std::vector<Statement>
+    auto Parser::parse() -> std::vector<std::unique_ptr<Statement>>
     {
-        std::vector<Statement> statements {};
+        std::vector<std::unique_ptr<Statement>> statements {};
 
         while (!isAtEnd())
         {
-            Statement newStatement = std::move(statement());
+            std::unique_ptr<Statement> newStatement = statement();
             statements.push_back(std::move(newStatement));
         }
 
         return statements;
     }
 
-    auto Parser::statement() -> Statement
+    auto Parser::statement() -> std::unique_ptr<Statement>
     {
         return declaration();
     }
 
-    auto Parser::declaration() -> Statement
+    auto Parser::declaration() -> std::unique_ptr<Statement>
     {
         if (match({TokenType::eLet}))
         {
@@ -55,10 +55,25 @@ namespace sail
             return printStatement();
         }
 
+        if (match({TokenType::eIf}))
+        {
+            return ifStatement();
+        }
+
+        if (match({TokenType::eWhile}))
+        {
+            return whileStatement();
+        }
+
+        if (match({TokenType::eFor}))
+        {
+            return forStatement();
+        }
+
         return expressionStatement();
     };
 
-    auto Parser::varDeclaration() -> Statement
+    auto Parser::varDeclaration() -> std::unique_ptr<Statement>
     {
         Token& name =
             consume(TokenType::eIdentifier, "Expected identifier after 'let'");
@@ -73,12 +88,13 @@ namespace sail
             consume(TokenType::eSemicolon,
                     "Expected semicolon after variable declaration");
 
-        return Statements::Variable {name, std::move(initializer)};
+        return std::make_unique<Statement>(
+            Statements::Variable {name, std::move(initializer)});
     }
 
-    auto Parser::blockStatement() -> Statement
+    auto Parser::blockStatement() -> std::unique_ptr<Statement>
     {
-        std::vector<Statement> statements {};
+        std::vector<std::unique_ptr<Statement>> statements {};
 
         while (!check(TokenType::eRightBrace) && !isAtEnd())
         {
@@ -86,23 +102,122 @@ namespace sail
         }
 
         consume(TokenType::eRightBrace, "Expected '}' after block");
-        return Statements::Block {std::move(statements)};
+        return std::make_unique<Statement>(
+            Statements::Block {std::move(statements)});
     }
 
-    auto Parser::expressionStatement() -> Statement
-    {
-        std::unique_ptr<Expression> newExpression = expression();
-        Statements::Expression newExpressionStatement {
-            std::move(newExpression)};
-        return newExpressionStatement;
-    }
-
-    auto Parser::printStatement() -> Statement
+    auto Parser::expressionStatement() -> std::unique_ptr<Statement>
     {
         std::unique_ptr<Expression> newExpression = expression();
         consume(TokenType::eSemicolon, "Expected semicolon after value");
-        Statements::Print newPrintStatement {std::move(newExpression)};
-        return newPrintStatement;
+        return std::make_unique<Statement>(
+            Statements::Expression {std::move(newExpression)});
+    }
+
+    auto Parser::printStatement() -> std::unique_ptr<Statement>
+    {
+        consume(TokenType::eLeftParen, "Expected '(' after 'print'");
+        std::unique_ptr<Expression> newExpression = expression();
+        consume(TokenType::eRightParen, "Expected ')' after print expression");
+        consume(TokenType::eSemicolon, "Expected semicolon after value");
+        return std::make_unique<Statement>(
+
+            Statements::Print {std::move(newExpression)});
+    }
+
+    auto Parser::ifStatement() -> std::unique_ptr<Statement>
+    {
+        consume(TokenType::eLeftParen, "Expected '(' after 'if'");
+        std::unique_ptr<Expression> condition = expression();
+        consume(TokenType::eRightParen, "Expected ')' after if condition");
+
+        std::unique_ptr<Statement> thenBranch = statement();
+        std::unique_ptr<Statement> elseBranch {};
+        if (match({TokenType::eElse}))
+        {
+            elseBranch = statement();
+        }
+
+        return std::make_unique<Statement>(
+            Statements::If {std::move(condition),
+                            std::move(thenBranch),
+                            std::move(elseBranch)});
+    }
+
+    auto Parser::whileStatement() -> std::unique_ptr<Statement>
+    {
+        consume(TokenType::eLeftParen, "Expected '(' after 'if'");
+        std::unique_ptr<Expression> condition = expression();
+        consume(TokenType::eLeftParen, "Expected ')' after while condition");
+        std::unique_ptr<Statement> body = statement();
+
+        return std::make_unique<Statement>(
+            Statements::While {std::move(condition), std::move(body)});
+    }
+
+    auto Parser::forStatement() -> std::unique_ptr<Statement>
+    {
+        consume(TokenType::eLeftParen, "Expected '(' after 'for'");
+
+        std::unique_ptr<Statement> initializer {};
+        if (match({TokenType::eSemicolon}))
+        {
+            initializer = nullptr;
+        }
+        else if (match({TokenType::eLet}))
+        {
+            initializer = varDeclaration();
+        }
+        else
+        {
+            initializer = expressionStatement();
+        }
+
+        std::unique_ptr<Expression> condition {};
+        if (!check(TokenType::eSemicolon))
+        {
+            condition = expression();
+        }
+        consume(TokenType::eSemicolon, "Expected ';' after loop condition");
+
+        std::unique_ptr<Expression> increment {};
+        if (!check(TokenType::eRightParen))
+        {
+            increment = expression();
+        }
+        consume(TokenType::eRightParen, "Expected ')' after for clauses");
+
+        std::unique_ptr<Statement> body = statement();
+
+        if (increment != nullptr)
+        {
+            std::vector<std::unique_ptr<Statement>> statements {};
+            statements.push_back(std::move(body));
+            statements.push_back(std::make_unique<Statement>(
+                Statements::Expression {std::move(increment)}));
+            body = std::make_unique<Statement>(
+                Statements::Block {std::move(statements)});
+        }
+
+        if (condition == nullptr)
+        {
+            condition = std::make_unique<Expression>(
+                Expressions::Literal {LiteralType {true}});
+        }
+
+        body = std::make_unique<Statement>(
+            Statements::While {std::move(condition), std::move(body)});
+
+        if (initializer != nullptr)
+        {
+            std::vector<std::unique_ptr<Statement>> statements {};
+            statements.push_back(std::move(initializer));
+            statements.push_back(std::move(body));
+            body = std::make_unique<Statement>(
+                Statements::Block {std::move(statements)});
+        }
+
+        return body;
     }
 
     auto Parser::expression() -> std::unique_ptr<Expression>
@@ -112,7 +227,7 @@ namespace sail
 
     auto Parser::assignment() -> std::unique_ptr<Expression>
     {
-        std::unique_ptr<Expression> expr = equality();
+        std::unique_ptr<Expression> expr = orExpression();
 
         if (match({TokenType::eEqual}))
         {
@@ -126,6 +241,36 @@ namespace sail
                     Expressions::Assignment {std::move(value), name});
             }
             throw ParserError(equals, "Invalid assignment target");
+        }
+
+        return expr;
+    }
+
+    auto Parser::orExpression() -> std::unique_ptr<Expression>
+    {
+        std::unique_ptr<Expression> expr = andExpression();
+
+        while (match({TokenType::eOr}))
+        {
+            Token oper = previous();
+            std::unique_ptr<Expression> right = andExpression();
+            expr = std::make_unique<Expression>(
+                Expressions::Logical {std::move(expr), std::move(right), oper});
+        }
+
+        return expr;
+    }
+
+    auto Parser::andExpression() -> std::unique_ptr<Expression>
+    {
+        std::unique_ptr<Expression> expr = equality();
+
+        while (match({TokenType::eAnd}))
+        {
+            Token oper = previous();
+            std::unique_ptr<Expression> right = equality();
+            expr = std::make_unique<Expression>(
+                Expressions::Logical {std::move(expr), std::move(right), oper});
         }
 
         return expr;

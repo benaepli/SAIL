@@ -31,6 +31,13 @@ namespace sail
                 std::cout << "Literal expression with value " << literal.literal
                           << std::endl;
             },
+            [](const Expressions::Logical& logical)
+            {
+                std::cout << "Logical expression with operator "
+                          << logical.oper.lexeme << std::endl;
+                printExpression(*logical.left);
+                printExpression(*logical.right);
+            },
             [](const Expressions::Unary& unary)
             {
                 std::cout << "Unary expression with operator "

@@ -1,6 +1,6 @@
 add_rules("mode.debug", "mode.release")
 
-add_requires("fmt", "magic_enum", "unordered_dense")
+add_requires("fmt", "magic_enum", "unordered_dense v3.0.0")
 
 set_project("SAIL")
 set_version("0.1.0")

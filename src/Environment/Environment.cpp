@@ -1,7 +1,9 @@
 #include <utility>
 
 #include "Environment/Environment.h"
+
 #include "Errors/RuntimeError.h"
+#include "fmt/format.h"
 
 namespace sail
 {
@@ -12,15 +14,14 @@ namespace sail
 
     auto Environment::get(const Token& name) -> LiteralType&
     {
-        if (name.type != TokenType::eIdentifier || !name.literal.isString())
+        if (name.type != TokenType::eIdentifier)
         {
             throw RuntimeError(name, "Attempted to get value of non-variable");
         }
 
-        const auto& nameString = std::get<std::string>(name.literal);
-        if (_values.contains(nameString))
+        if (_values.contains(name.lexeme))
         {
-            return _values[nameString];
+            return _values[name.lexeme];
         }
 
         if (_enclosing != nullptr)
@@ -28,7 +29,10 @@ namespace sail
             return _enclosing->get(name);
         }
 
-        throw RuntimeError(name, "Undefined variable '" + nameString + "'");
+        throw RuntimeError(
+            name,
+            fmt::format("Attempted to get undefined variable '{}'",
+                        name.lexeme));
     }
 
     void Environment::define(const std::string& name, const LiteralType& value)
@@ -38,27 +42,24 @@ namespace sail
 
     void Environment::define(const Token& name, const LiteralType& value)
     {
-        if (name.type != TokenType::eIdentifier || !name.literal.isString())
+        if (name.type != TokenType::eIdentifier)
         {
             throw RuntimeError(name, "Attempted to define non-variable");
         }
 
-        const auto& nameString = std::get<std::string>(name.literal);
-        _values[nameString] = value;
+        _values[name.lexeme] = value;
     }
 
     void Environment::assign(const Token& name, const LiteralType& value)
     {
-        if (name.type != TokenType::eIdentifier || !name.literal.isString())
+        if (name.type != TokenType::eIdentifier)
         {
             throw RuntimeError(name, "Attempted to assign non-variable");
         }
 
-        const auto& nameString = std::get<std::string>(name.literal);
-
-        if (_values.contains(nameString))
+        if (_values.contains(name.lexeme))
         {
-            _values[nameString] = value;
+            _values[name.lexeme] = value;
             return;
         }
 
@@ -68,6 +69,9 @@ namespace sail
             return;
         }
 
-        throw RuntimeError(name, "Undefined variable '" + nameString + "'");
+        throw RuntimeError(
+            name,
+            fmt::format("Attempted to assign undefined variable '{}'",
+                        name.lexeme));
     }
 }  // namespace sail

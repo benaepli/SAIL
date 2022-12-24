@@ -7,8 +7,10 @@
 
 namespace sail::Statements
 {
-    struct Expression
+    struct If
     {
-        std::unique_ptr<sail::Expression> expression;
+        std::unique_ptr<sail::Expression> condition;
+        std::unique_ptr<Statement> thenBranch;
+        std::unique_ptr<Statement> elseBranch;
     };
 }  // namespace sail::Statements

@@ -1,10 +1,11 @@
 #include <iostream>
 #include <string>
 
-#include "EntryPoints/EntryPoints.h"
+#include "Instance/Instance.h"
 
 auto main(const int argc, const char* argv[]) -> int
 {
+    sail::Instance instance {};
 
     if (argc > 2)
     {
@@ -14,11 +15,11 @@ auto main(const int argc, const char* argv[]) -> int
 
     if (argc == 2)
     {
-        sail::EntryPoints::runFile(argv[1]);
+        instance.runFile(argv[1]);
     }
     else
     {
-        sail::EntryPoints::runPrompt();
+        instance.runPrompt();
     }
 
     return EXIT_SUCCESS;

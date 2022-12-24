@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <any>
+#include <stdexcept>
 #include <variant>
 
 #include "Interpreter/Interpreter.h"
@@ -21,10 +22,10 @@ namespace sail
     {
     }
 
-    void Interpreter::interpret(std::vector<Statement>& statements)
+    void Interpreter::interpret(
+        std::vector<std::unique_ptr<Statement>>& statements)
     {
-        auto each = [&](auto& statement) -> void { execute(statement); };
-
+        auto each = [&](auto& statement) -> void { execute(*statement); };
         std::ranges::for_each(statements, each);
     }
 
@@ -36,10 +37,14 @@ namespace sail
                 { blockStatement(statement); },
                 [this](Statements::Expression& statement) -> void
                 { expressionStatement(statement); },
+                [this](Statements::If& statement) -> void
+                { ifStatement(statement); },
                 [this](Statements::Print& statement) -> void
                 { printStatement(statement); },
                 [this](Statements::Variable& statement) -> void
                 { variableStatement(statement); },
+                [this](Statements::While& statement) -> void
+                { whileStatement(statement); },
             },
             statement);
     }
@@ -51,6 +56,8 @@ namespace sail
                       { return assignmentExpression(expression); },
                       [this](Expressions::Literal& expression) -> LiteralType
                       { return literalExpression(expression); },
+                      [this](Expressions::Logical& expression) -> LiteralType
+                      { return logicalExpression(expression); },
                       [this](Expressions::Grouping& expression) -> LiteralType
                       { return groupingExpression(expression); },
                       [this](Expressions::Unary& expression) -> LiteralType
@@ -67,7 +74,7 @@ namespace sail
         std::shared_ptr<Environment> previousEnvironment = _environment;
         _environment = std::make_shared<Environment>(_environment);
 
-        auto each = [&](auto& statement) -> void { execute(statement); };
+        auto each = [&](auto& statement) -> void { execute(*statement); };
         std::ranges::for_each(statement.statements, each);
 
         _environment = previousEnvironment;
@@ -76,6 +83,18 @@ namespace sail
     void Interpreter::expressionStatement(Statements::Expression& statement)
     {
         evaluate(*statement.expression);
+    }
+
+    void Interpreter::ifStatement(Statements::If& statement)
+    {
+        if (evaluate(*statement.condition).isTruthy())
+        {
+            execute(*statement.thenBranch);
+        }
+        else if (statement.elseBranch != nullptr)
+        {
+            execute(*statement.elseBranch);
+        }
     }
 
     void Interpreter::printStatement(Statements::Print& statement)
@@ -96,6 +115,14 @@ namespace sail
         _environment->define(statement.name, value);
     }
 
+    void Interpreter::whileStatement(Statements::While& statement)
+    {
+        while (evaluate(*statement.condition).isTruthy())
+        {
+            execute(*statement.body);
+        }
+    }
+
     auto Interpreter::assignmentExpression(Expressions::Assignment& expression)
         -> LiteralType
     {
@@ -108,6 +135,27 @@ namespace sail
         -> LiteralType
     {
         return expression.literal;
+    }
+
+    auto Interpreter::logicalExpression(Expressions::Logical& expression)
+        -> LiteralType
+    {
+        LiteralType left = evaluate(*expression.left);
+        if (expression.oper.type == TokenType::eOr)
+        {
+            if (left.isTruthy())
+            {
+                return left;
+            }
+        }
+        else
+        {
+            if (!left.isTruthy())
+            {
+                return left;
+            }
+        }
+        return evaluate(*expression.right);
     }
 
     auto Interpreter::groupingExpression(Expressions::Grouping& expression)

@@ -15,18 +15,23 @@ namespace sail
       public:
         explicit Parser(std::vector<Token>& tokens);
 
-        auto parse() -> std::vector<Statement>;
+        auto parse() -> std::vector<std::unique_ptr<Statement>>;
 
       private:
-        auto statement() -> Statement;
-        auto declaration() -> Statement;
-        auto varDeclaration() -> Statement;
-        auto blockStatement() -> Statement;
-        auto expressionStatement() -> Statement;
-        auto printStatement() -> Statement;
+        auto statement() -> std::unique_ptr<Statement>;
+        auto declaration() -> std::unique_ptr<Statement>;
+        auto varDeclaration() -> std::unique_ptr<Statement>;
+        auto blockStatement() -> std::unique_ptr<Statement>;
+        auto expressionStatement() -> std::unique_ptr<Statement>;
+        auto printStatement() -> std::unique_ptr<Statement>;
+        auto whileStatement() -> std::unique_ptr<Statement>;
+        auto ifStatement() -> std::unique_ptr<Statement>;
+        auto forStatement() -> std::unique_ptr<Statement>;
 
         auto expression() -> std::unique_ptr<Expression>;
         auto assignment() -> std::unique_ptr<Expression>;
+        auto orExpression() -> std::unique_ptr<Expression>;
+        auto andExpression() -> std::unique_ptr<Expression>;
         auto equality() -> std::unique_ptr<Expression>;
         auto comparison() -> std::unique_ptr<Expression>;
         auto term() -> std::unique_ptr<Expression>;

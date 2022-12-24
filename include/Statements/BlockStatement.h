@@ -10,6 +10,6 @@ namespace sail::Statements
 {
     struct Block
     {
-        std::vector<Statement> statements;
+        std::vector<std::unique_ptr<sail::Statement>> statements;
     };
 }  // namespace sail::Statements

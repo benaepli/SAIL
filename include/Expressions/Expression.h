@@ -12,6 +12,7 @@ namespace sail
         struct Binary;
         struct Grouping;
         struct Literal;
+        struct Logical;
         struct Unary;
         struct Variable;
     }  // namespace Expressions
@@ -20,6 +21,7 @@ namespace sail
                                     Expressions::Binary,
                                     Expressions::Grouping,
                                     Expressions::Literal,
+                                    Expressions::Logical,
                                     Expressions::Unary,
                                     Expressions::Variable>;
 

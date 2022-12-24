@@ -15,7 +15,7 @@ namespace sail
         Interpreter();
 
         void execute(Statement& statement);
-        void interpret(std::vector<Statement>& statements);
+        void interpret(std::vector<std::unique_ptr<Statement>>& statements);
 
       private:
         auto evaluate(Expression& expression) -> LiteralType;
@@ -23,13 +23,16 @@ namespace sail
         // Statement execution
         auto blockStatement(Statements::Block& statement) -> void;
         auto expressionStatement(Statements::Expression& statement) -> void;
+        auto ifStatement(Statements::If& statement) -> void;
         auto printStatement(Statements::Print& statement) -> void;
         auto variableStatement(Statements::Variable& statement) -> void;
+        auto whileStatement(Statements::While& statement) -> void;
 
         // Expression evaluation
         auto assignmentExpression(Expressions::Assignment& expression)
             -> LiteralType;
         auto literalExpression(Expressions::Literal& expression) -> LiteralType;
+        auto logicalExpression(Expressions::Logical& expression) -> LiteralType;
         auto groupingExpression(Expressions::Grouping& expression)
             -> LiteralType;
         auto unaryExpression(Expressions::Unary& expression) -> LiteralType;

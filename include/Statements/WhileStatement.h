@@ -7,8 +7,10 @@
 
 namespace sail::Statements
 {
-    struct Expression
+    struct While
     {
-        std::unique_ptr<sail::Expression> expression;
+        std::unique_ptr<sail::Expression> condition;
+        std::unique_ptr<Statement> body;
     };
+
 }  // namespace sail::Statements
