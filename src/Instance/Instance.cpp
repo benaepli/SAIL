@@ -5,6 +5,7 @@
 
 #include "Interpreter/Interpreter.h"
 #include "Parser/Parser.h"
+#include "Resolver/Resolver.h"
 #include "Scanner/Scanner.h"
 
 namespace sail
@@ -23,17 +24,23 @@ namespace sail
     void Instance::runFile(const std::string& path)
     {
         std::ifstream stream(path);
-
-        if (stream.is_open())
+        try
         {
-            std::string source;
-            source = std::string((std::istreambuf_iterator<char>(stream)),
-                                 std::istreambuf_iterator<char>());
-            run(source);
+            if (stream.is_open())
+            {
+                std::string source;
+                source = std::string((std::istreambuf_iterator<char>(stream)),
+                                     std::istreambuf_iterator<char>());
+                run(source);
+            }
+            else
+            {
+                std::cout << "Could not open file " << path << std::endl;
+            }
         }
-        else
+        catch (const std::exception& e)
         {
-            throw std::runtime_error("Could not open file " + path);
+            std::cout << e.what() << std::endl;
         }
     }
 
@@ -69,6 +76,9 @@ namespace sail
 
         Parser parser {tokens};
         std::vector<std::unique_ptr<Statement>> statements = parser.parse();
+
+        Resolver resolver {*_interpreter};
+        resolver.resolve(statements);
 
         _interpreter->interpret(statements);
     }

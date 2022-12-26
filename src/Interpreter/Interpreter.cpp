@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <any>
+#include <limits>
 #include <stdexcept>
+#include <utility>
 #include <variant>
 
 #include "Interpreter/Interpreter.h"
@@ -10,8 +12,10 @@
 #include "Expressions/Expression.h"
 #include "Expressions/Expressions.h"
 #include "Expressions/VariableExpression.h"
+#include "Native/DefineNative.h"
 #include "Statements/Statements.h"
 #include "Token/Token.h"
+#include "Types/Value.h"
 #include "fmt/format.h"
 
 namespace sail
@@ -20,6 +24,7 @@ namespace sail
         : _globalEnvironment(std::make_unique<Environment>())
         , _environment(_globalEnvironment)
     {
+        defineNativeFunctions(*_globalEnvironment);
     }
 
     void Interpreter::interpret(
@@ -37,10 +42,12 @@ namespace sail
                 { blockStatement(statement); },
                 [this](Statements::Expression& statement) -> void
                 { expressionStatement(statement); },
+                [this](Statements::Function& statement) -> void
+                { functionStatement(statement); },
                 [this](Statements::If& statement) -> void
                 { ifStatement(statement); },
-                [this](Statements::Print& statement) -> void
-                { printStatement(statement); },
+                [this](Statements::Return& statement) -> void
+                { returnStatement(statement); },
                 [this](Statements::Variable& statement) -> void
                 { variableStatement(statement); },
                 [this](Statements::While& statement) -> void
@@ -49,40 +56,64 @@ namespace sail
             statement);
     }
 
-    auto Interpreter::evaluate(Expression& expression) -> LiteralType
+    auto Interpreter::evaluate(Expression& expression) -> Value
     {
         return std::visit(
-            Overload {[this](Expressions::Assignment& expression) -> LiteralType
-                      { return assignmentExpression(expression); },
-                      [this](Expressions::Literal& expression) -> LiteralType
-                      { return literalExpression(expression); },
-                      [this](Expressions::Logical& expression) -> LiteralType
-                      { return logicalExpression(expression); },
-                      [this](Expressions::Grouping& expression) -> LiteralType
-                      { return groupingExpression(expression); },
-                      [this](Expressions::Unary& expression) -> LiteralType
-                      { return unaryExpression(expression); },
-                      [this](Expressions::Binary& expression) -> LiteralType
-                      { return binaryExpression(expression); },
-                      [this](Expressions::Variable& expression) -> LiteralType
-                      { return variableExpression(expression); }},
+            Overload {
+                [this,
+                 &expression](Expressions::Assignment& assignment) -> Value
+                { return assignmentExpression(assignment, expression); },
+                [this](Expressions::Call& expression) -> Value
+                { return callExpression(expression); },
+                [this](Expressions::Literal& expression) -> Value
+                { return literalExpression(expression); },
+                [this](Expressions::Logical& expression) -> Value
+                { return logicalExpression(expression); },
+                [this](Expressions::Grouping& expression) -> Value
+                { return groupingExpression(expression); },
+                [this](Expressions::Unary& expression) -> Value
+                { return unaryExpression(expression); },
+                [this](Expressions::Binary& expression) -> Value
+                { return binaryExpression(expression); },
+                [this, &expression](Expressions::Variable& variable) -> Value
+                { return variableExpression(variable, expression); }},
             expression);
     }
 
     void Interpreter::blockStatement(Statements::Block& statement)
     {
+        executeBlock(statement.statements,
+                     std::make_shared<Environment>(_environment));
+    }
+
+    void Interpreter::executeBlock(
+        std::vector<std::unique_ptr<Statement>>& statements,
+        std::shared_ptr<Environment> environment)
+    {
         std::shared_ptr<Environment> previousEnvironment = _environment;
-        _environment = std::make_shared<Environment>(_environment);
+        _environment = std::move(environment);
 
         auto each = [&](auto& statement) -> void { execute(*statement); };
-        std::ranges::for_each(statement.statements, each);
+        std::ranges::for_each(statements, each);
 
         _environment = previousEnvironment;
+    }
+
+    void Interpreter::resolve(Expression& expression, size_t depth)
+    {
+        _locals[&expression] = depth;
     }
 
     void Interpreter::expressionStatement(Statements::Expression& statement)
     {
         evaluate(*statement.expression);
+    }
+
+    void Interpreter::functionStatement(Statements::Function& statement)
+    {
+        auto function = std::make_shared<Types::Function>(std::move(statement),
+                                                          _environment);
+        _environment->define(function->name(), function);
     }
 
     void Interpreter::ifStatement(Statements::If& statement)
@@ -97,15 +128,21 @@ namespace sail
         }
     }
 
-    void Interpreter::printStatement(Statements::Print& statement)
+    void Interpreter::returnStatement(Statements::Return& statement)
     {
-        LiteralType value = evaluate(*statement.expression);
-        std::cout << value << std::endl;
+        Value value = Types::Null {};
+
+        if (statement.value != nullptr)
+        {
+            value = evaluate(*statement.value);
+        }
+
+        throw Return {value};
     }
 
     void Interpreter::variableStatement(Statements::Variable& statement)
     {
-        LiteralType value = LiteralNull {};
+        Value value = Types::Null {};
 
         if (statement.initializer != nullptr)
         {
@@ -123,24 +160,45 @@ namespace sail
         }
     }
 
-    auto Interpreter::assignmentExpression(Expressions::Assignment& expression)
-        -> LiteralType
+    auto Interpreter::assignmentExpression(Expressions::Assignment& assignment,
+                                           Expression& expression) -> Value
     {
-        LiteralType value = evaluate(*expression.value);
-        _environment->assign(expression.name, value);
+        Value value = evaluate(*assignment.value);
+
+        if (_locals.contains(&expression))
+        {
+            size_t distance = _locals[&expression];
+            _environment->assignAt(distance, assignment.name, value);
+        }
+        else
+        {
+            _environment->assign(assignment.name, value);
+        }
+
         return value;
     }
 
     auto Interpreter::literalExpression(Expressions::Literal& expression)
-        -> LiteralType
+        -> Value
     {
-        return expression.literal;
+        Value value {};
+
+        std::visit(
+            Overload {
+                [&](const std::string& str) { value = str; },
+                [&](const double& num) { value = num; },
+                [&](const bool& val) { value = val; },
+                [&](const Types::Null&) { value = Types::Null {}; },
+            },
+            expression.literal);
+
+        return value;
     }
 
     auto Interpreter::logicalExpression(Expressions::Logical& expression)
-        -> LiteralType
+        -> Value
     {
-        LiteralType left = evaluate(*expression.left);
+        Value left = evaluate(*expression.left);
         if (expression.oper.type == TokenType::eOr)
         {
             if (left.isTruthy())
@@ -159,15 +217,14 @@ namespace sail
     }
 
     auto Interpreter::groupingExpression(Expressions::Grouping& expression)
-        -> LiteralType
+        -> Value
     {
         return evaluate(*expression.expression);
     }
 
-    auto Interpreter::unaryExpression(Expressions::Unary& expression)
-        -> LiteralType
+    auto Interpreter::unaryExpression(Expressions::Unary& expression) -> Value
     {
-        LiteralType right = evaluate(*expression.right);
+        Value right = evaluate(*expression.right);
         switch (expression.oper.type)
         {
             case TokenType::eMinus:
@@ -188,11 +245,10 @@ namespace sail
         return {};
     }
 
-    auto Interpreter::binaryExpression(Expressions::Binary& expression)
-        -> LiteralType
+    auto Interpreter::binaryExpression(Expressions::Binary& expression) -> Value
     {
-        LiteralType left = evaluate(*expression.left);
-        LiteralType right = evaluate(*expression.right);
+        Value left = evaluate(*expression.left);
+        Value right = evaluate(*expression.right);
 
         if (expression.oper.type == TokenType::ePlus)
         {
@@ -249,10 +305,44 @@ namespace sail
         throw RuntimeError(expression.oper, "Unknown operator");
     }
 
-    auto Interpreter::variableExpression(Expressions::Variable& expression)
-        -> LiteralType
+    auto Interpreter::callExpression(Expressions::Call& expression) -> Value
     {
-        return _environment->get(expression.name);
+        Value callee = evaluate(*expression.callee);
+        std::vector<Value> arguments;
+        auto each = [&](auto& argument) -> void
+        { arguments.push_back(evaluate(*argument)); };
+        std::ranges::for_each(expression.arguments, each);
+
+        if (std::shared_ptr<Types::Callable>* callablePointer =
+                std::get_if<std::shared_ptr<Types::Callable>>(&callee))
+        {
+            std::shared_ptr<Types::Callable> callable = *callablePointer;
+            size_t arity = callable->arity();
+            if (arguments.size() != arity
+                && arity != std::numeric_limits<size_t>::max())
+            {
+                throw RuntimeError(
+                    expression.paren,
+                    fmt::format("Expected {} arguments but got {}",
+                                callable->arity(),
+                                arguments.size()));
+            }
+            return callable->call(*this, arguments);
+        }
+
+        throw RuntimeError(expression.paren, "Can only call functions");
+    }
+
+    auto Interpreter::variableExpression(Expressions::Variable& variable,
+                                         Expression& expression) -> Value
+    {
+        if (_locals.contains(&expression))
+        {
+            size_t distance = _locals[&expression];
+            return _environment->getAt(distance, variable.name);
+        }
+
+        return _environment->get(variable.name);
     }
 
 }  // namespace sail

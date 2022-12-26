@@ -10,6 +10,7 @@ namespace sail
     {
         struct Assignment;
         struct Binary;
+        struct Call;
         struct Grouping;
         struct Literal;
         struct Logical;
@@ -19,12 +20,10 @@ namespace sail
 
     using Expression = std::variant<Expressions::Assignment,
                                     Expressions::Binary,
+                                    Expressions::Call,
                                     Expressions::Grouping,
                                     Expressions::Literal,
                                     Expressions::Logical,
                                     Expressions::Unary,
                                     Expressions::Variable>;
-
-    void printExpression(const Expression& expression);
-
 }  // namespace sail

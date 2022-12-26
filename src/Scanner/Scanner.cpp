@@ -14,11 +14,10 @@ namespace sail
         {"else", TokenType::eElse},
         {"false", TokenType::eFalse},
         {"for", TokenType::eFor},
-        {"fun", TokenType::eFun},
+        {"fn", TokenType::eFn},
         {"if", TokenType::eIf},
         {"let", TokenType::eLet},
         {"null", TokenType::eNull},
-        {"print", TokenType::ePrint},  // Only for testing
         {"return", TokenType::eReturn},
         {"super", TokenType::eSuper},
         {"this", TokenType::eThis},

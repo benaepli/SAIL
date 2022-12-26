@@ -12,7 +12,7 @@ namespace sail
     {
     }
 
-    auto Environment::get(const Token& name) -> LiteralType&
+    auto Environment::get(const Token& name) -> Value&
     {
         if (name.type != TokenType::eIdentifier)
         {
@@ -35,12 +35,27 @@ namespace sail
                         name.lexeme));
     }
 
-    void Environment::define(const std::string& name, const LiteralType& value)
+    auto Environment::getAt(size_t distance, const std::string& name) -> Value&
+    {
+        return ancestor(distance)->_values[name];
+    }
+
+    auto Environment::getAt(size_t distance, const Token& name) -> Value&
+    {
+        if (name.type != TokenType::eIdentifier)
+        {
+            throw RuntimeError(name, "Attempted to get value of non-variable");
+        }
+
+        return ancestor(distance)->_values[name.lexeme];
+    }
+
+    void Environment::define(const std::string& name, const Value& value)
     {
         _values[name] = value;
     }
 
-    void Environment::define(const Token& name, const LiteralType& value)
+    void Environment::define(const Token& name, const Value& value)
     {
         if (name.type != TokenType::eIdentifier)
         {
@@ -50,7 +65,7 @@ namespace sail
         _values[name.lexeme] = value;
     }
 
-    void Environment::assign(const Token& name, const LiteralType& value)
+    void Environment::assign(const Token& name, const Value& value)
     {
         if (name.type != TokenType::eIdentifier)
         {
@@ -73,5 +88,28 @@ namespace sail
             name,
             fmt::format("Attempted to assign undefined variable '{}'",
                         name.lexeme));
+    }
+
+    void Environment::assignAt(size_t distance,
+                               const Token& name,
+                               const Value& value)
+    {
+        if (name.type != TokenType::eIdentifier)
+        {
+            throw RuntimeError(name, "Attempted to assign non-variable");
+        }
+
+        ancestor(distance)->_values[name.lexeme] = value;
+    }
+
+    auto Environment::ancestor(size_t distance) -> Environment*
+    {
+        auto* environment = this;
+        for (auto i = 0; i < distance; ++i)
+        {
+            environment = environment->_enclosing.get();
+        }
+
+        return environment;
     }
 }  // namespace sail

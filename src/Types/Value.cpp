@@ -1,9 +1,11 @@
+#include "Types/Value.h"
+
 #include "../utils/Overload.h"
+#include "Token/LiteralType.h"
 #include "Types/Types.h"
 
 namespace sail
 {
-
     auto Value::isTruthy() const -> bool
     {
         return std::visit(
@@ -11,7 +13,7 @@ namespace sail
                       { return !str.empty(); },
                       [](const double& num) -> bool { return num != 0; },
                       [](const bool& val) -> bool { return val; },
-                      [](const FunctionPointer& function) -> bool
+                      [](const CallablePointer& function) -> bool
                       { return function != nullptr; },
                       [](const Types::Null&) -> bool { return false; }},
             *this);
@@ -64,17 +66,17 @@ namespace sail
                           return std::holds_alternative<bool>(other)
                               && val == std::get<bool>(other);
                       },
-                      [&](const FunctionPointer& function)
+                      [&](const CallablePointer& function)
                       {
-                          return std::holds_alternative<FunctionPointer>(other)
-                              && function == std::get<FunctionPointer>(other);
+                          return std::holds_alternative<CallablePointer>(other)
+                              && function == std::get<CallablePointer>(other);
                       },
                       [&](const Types::Null&)
                       { return std::holds_alternative<Types::Null>(other); }},
             *this);
     }
 
-    auto operator<<(std::ostream& os, const Value& value) -> std::ostream&
+    auto operator<<(std::ostream& ostr, const Value& value) -> std::ostream&
     {
         std::visit(Overload {[&](const std::string& str)
                              {
@@ -82,18 +84,18 @@ namespace sail
                                  {
                                      return;
                                  }
-                                 os << str;
+                                 ostr << str;
                              },
-                             [&](const double& num) { os << num; },
-                             [&](const bool& b) { os << b; },
-                             [&](const FunctionPointer& function)
+                             [&](const double& num) { ostr << num; },
+                             [&](const bool& b) { ostr << b; },
+                             [&](const CallablePointer& callable)
                              {
-                                 os << "function ";
+                                 ostr << "<fn " << callable->name() << ">";
                                  // TODO: Print function name
                              },
-                             [&](const Types::Null& null) { os << "null"; }},
+                             [&](const Types::Null& null) { ostr << "null"; }},
                    value);
 
-        return os;
+        return ostr;
     }
 }  // namespace sail

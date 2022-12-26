@@ -3,13 +3,25 @@
 #include <memory>
 #include <vector>
 
-#include "Types/Value.h"
+#include "CallableType.h"
+#include "Interpreter/Interpreter.h"
 
 namespace sail::Types
 {
-    struct Function
+    class Function : public Callable
     {
-        std::vector<Value> parameters;
-        Value returnValue;
+      public:
+        explicit Function(Statements::Function body,
+                          std::shared_ptr<Environment> closure);
+
+        auto call(Interpreter& interpreter, std::vector<Value>& arguments)
+            -> Value override;
+        auto arity() const -> size_t override;
+
+        auto name() const -> std::string const& override;
+
+      private:
+        Statements::Function _body;
+        std::shared_ptr<Environment> _closure;
     };
 }  // namespace sail::Types

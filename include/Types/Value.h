@@ -13,13 +13,15 @@ namespace sail
 
     namespace Types
     {
-        struct Function;
+        struct Callable;
     }  // namespace Types
 
-    using FunctionPointer = std::shared_ptr<Types::Function>;
+    using CallablePointer = std::shared_ptr<Types::Callable>;
 
     using ValueVariantType =
-        std::variant<std::string, double, bool, FunctionPointer, Types::Null>;
+        std::variant<std::string, double, bool, CallablePointer, Types::Null>;
+
+    struct LiteralType;
 
     struct Value : public ValueVariantType
     {

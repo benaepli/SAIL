@@ -10,6 +10,7 @@
 #include "Expressions/VariableExpression.h"
 #include "Statements/Statements.h"
 #include "Token/Token.h"
+#include "Types/Types.h"
 #include "fmt/format.h"
 
 namespace sail
@@ -40,6 +41,11 @@ namespace sail
 
     auto Parser::declaration() -> std::unique_ptr<Statement>
     {
+        if (match({TokenType::eFn}))
+        {
+            return functionStatement();
+        }
+
         if (match({TokenType::eLet}))
         {
             return varDeclaration();
@@ -50,9 +56,9 @@ namespace sail
             return blockStatement();
         }
 
-        if (match({TokenType::ePrint}))
+        if (match({TokenType::eReturn}))
         {
-            return printStatement();
+            return returnStatement();
         }
 
         if (match({TokenType::eIf}))
@@ -94,6 +100,13 @@ namespace sail
 
     auto Parser::blockStatement() -> std::unique_ptr<Statement>
     {
+        std::vector<std::unique_ptr<Statement>> statements = block();
+        return std::make_unique<Statement>(
+            Statements::Block {std::move(statements)});
+    }
+
+    auto Parser::block() -> std::vector<std::unique_ptr<Statement>>
+    {
         std::vector<std::unique_ptr<Statement>> statements {};
 
         while (!check(TokenType::eRightBrace) && !isAtEnd())
@@ -102,8 +115,7 @@ namespace sail
         }
 
         consume(TokenType::eRightBrace, "Expected '}' after block");
-        return std::make_unique<Statement>(
-            Statements::Block {std::move(statements)});
+        return statements;
     }
 
     auto Parser::expressionStatement() -> std::unique_ptr<Statement>
@@ -114,15 +126,44 @@ namespace sail
             Statements::Expression {std::move(newExpression)});
     }
 
-    auto Parser::printStatement() -> std::unique_ptr<Statement>
+    auto Parser::functionStatement() -> std::unique_ptr<Statement>
     {
-        consume(TokenType::eLeftParen, "Expected '(' after 'print'");
-        std::unique_ptr<Expression> newExpression = expression();
-        consume(TokenType::eRightParen, "Expected ')' after print expression");
-        consume(TokenType::eSemicolon, "Expected semicolon after value");
-        return std::make_unique<Statement>(
+        Token& name =
+            consume(TokenType::eIdentifier, "Expected identifier after 'fun'");
+        consume(TokenType::eLeftParen, "Expected '(' after function name");
+        std::vector<Token> parameters {};
+        if (!check(TokenType::eRightParen))
+        {
+            do
+            {
+                if (parameters.size() >= 255)
+                {
+                    throw ParserError(peek(),
+                                      "Cannot have more than 255 parameters");
+                }
+                parameters.push_back(
+                    consume(TokenType::eIdentifier, "Expected parameter name"));
+            } while (match({TokenType::eComma}));
+        }
+        consume(TokenType::eRightParen, "Expected ')' after parameters");
+        consume(TokenType::eLeftBrace, "Expected '{' before function body");
+        std::vector<std::unique_ptr<Statement>> body = block();
+        return std::make_unique<Statement>(Statements::Function {
+            name, std::move(parameters), std::move(body)});
+    }
 
-            Statements::Print {std::move(newExpression)});
+    auto Parser::returnStatement() -> std::unique_ptr<Statement>
+    {
+        Token& keyword = previous();
+        std::unique_ptr<Expression> value {};
+        if (!check(TokenType::eSemicolon))
+        {
+            value = expression();
+        }
+
+        consume(TokenType::eSemicolon, "Expected semicolon after return value");
+        return std::make_unique<Statement>(
+            Statements::Return {std::move(value), keyword});
     }
 
     auto Parser::ifStatement() -> std::unique_ptr<Statement>
@@ -349,7 +390,48 @@ namespace sail
                 Expressions::Unary {std::move(right), oper});
         }
 
-        return primary();
+        return call();
+    }
+
+    auto Parser::call() -> std::unique_ptr<Expression>
+    {
+        std::unique_ptr<Expression> expr = primary();
+
+        while (true)
+        {
+            if (match({TokenType::eLeftParen}))
+            {
+                expr = finishCall(std::move(expr));
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return expr;
+    }
+
+    auto Parser::finishCall(std::unique_ptr<Expression> callee)
+        -> std::unique_ptr<Expression>
+    {
+        std::vector<std::unique_ptr<Expression>> arguments {};
+        if (!check(TokenType::eRightParen))
+        {
+            do
+            {
+                if (arguments.size() >= 255)
+                {
+                    throw ParserError(peek(),
+                                      "Can't have more than 255 arguments");
+                }
+                arguments.push_back(expression());
+            } while (match({TokenType::eComma}));
+        }
+        Token paren =
+            consume(TokenType::eRightParen, "Expect ')' after arguments");
+        return std::make_unique<Expression>(
+            Expressions::Call {std::move(callee), std::move(arguments), paren});
     }
 
     auto Parser::primary() -> std::unique_ptr<Expression>
@@ -365,7 +447,7 @@ namespace sail
         if (match({TokenType::eNull}))
         {
             return std::make_unique<Expression>(
-                Expressions::Literal {LiteralNull {}});
+                Expressions::Literal {Types::Null {}});
         }
 
         if (match({TokenType::eNumber, TokenType::eString}))
@@ -471,12 +553,11 @@ namespace sail
             switch (peek().type)
             {
                 case TokenType::eClass:
-                case TokenType::eFun:
+                case TokenType::eFn:
                 case TokenType::eLet:
                 case TokenType::eFor:
                 case TokenType::eIf:
                 case TokenType::eWhile:
-                case TokenType::ePrint:
                 case TokenType::eReturn:
                     return;
 

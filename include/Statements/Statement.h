@@ -8,16 +8,18 @@ namespace sail
     {
         struct Block;
         struct Expression;
+        struct Function;
         struct If;
-        struct Print;
+        struct Return;
         struct Variable;
         struct While;
     }  // namespace Statements
 
     using Statement = std::variant<Statements::Block,
                                    Statements::Expression,
+                                   Statements::Function,
                                    Statements::If,
-                                   Statements::Print,
                                    Statements::Variable,
+                                   Statements::Return,
                                    Statements::While>;
 }  // namespace sail

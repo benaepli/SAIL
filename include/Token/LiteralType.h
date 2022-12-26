@@ -5,28 +5,16 @@
 #include <string>
 #include <variant>
 
+#include "Types/NullType.h"
+
 namespace sail
 {
-    enum class TokenType;
-
-    struct LiteralNull
-    {
-    };
-
     class LiteralType
-        : public std::variant<std::string, double, bool, LiteralNull>
+        : public std::variant<std::string, double, bool, Types::Null>
     {
       public:
-        auto isTruthy() const -> bool;
-
-        auto isNumeric() const -> bool;
-        auto isString() const -> bool;
-        auto isNull() const -> bool;
-
-        auto asNumber() const -> std::optional<double>;
-
-        using std::variant<std::string, double, bool, LiteralNull>::variant;
-        using std::variant<std::string, double, bool, LiteralNull>::operator=;
+        using std::variant<std::string, double, bool, Types::Null>::variant;
+        using std::variant<std::string, double, bool, Types::Null>::operator=;
 
         auto operator==(const LiteralType& other) const -> bool;
 
