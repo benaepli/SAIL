@@ -14,11 +14,6 @@ namespace sail
 
     auto Environment::get(const Token& name) -> Value&
     {
-        if (name.type != TokenType::eIdentifier)
-        {
-            throw RuntimeError(name, "Attempted to get value of non-variable");
-        }
-
         if (_values.contains(name.lexeme))
         {
             return _values[name.lexeme];
@@ -42,11 +37,6 @@ namespace sail
 
     auto Environment::getAt(size_t distance, const Token& name) -> Value&
     {
-        if (name.type != TokenType::eIdentifier)
-        {
-            throw RuntimeError(name, "Attempted to get value of non-variable");
-        }
-
         return ancestor(distance)->_values[name.lexeme];
     }
 
@@ -57,21 +47,11 @@ namespace sail
 
     void Environment::define(const Token& name, const Value& value)
     {
-        if (name.type != TokenType::eIdentifier)
-        {
-            throw RuntimeError(name, "Attempted to define non-variable");
-        }
-
         _values[name.lexeme] = value;
     }
 
     void Environment::assign(const Token& name, const Value& value)
     {
-        if (name.type != TokenType::eIdentifier)
-        {
-            throw RuntimeError(name, "Attempted to assign non-variable");
-        }
-
         if (_values.contains(name.lexeme))
         {
             _values[name.lexeme] = value;
@@ -94,11 +74,6 @@ namespace sail
                                const Token& name,
                                const Value& value)
     {
-        if (name.type != TokenType::eIdentifier)
-        {
-            throw RuntimeError(name, "Attempted to assign non-variable");
-        }
-
         ancestor(distance)->_values[name.lexeme] = value;
     }
 
@@ -111,5 +86,10 @@ namespace sail
         }
 
         return environment;
+    }
+
+    void Environment::reset()
+    {
+        _values.clear();
     }
 }  // namespace sail

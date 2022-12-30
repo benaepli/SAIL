@@ -20,6 +20,8 @@ namespace sail
         void assign(const Token& name, const Value& value);
         void assignAt(size_t distance, const Token& name, const Value& value);
 
+        void reset();
+
       private:
         auto ancestor(size_t distance) -> Environment*;
 

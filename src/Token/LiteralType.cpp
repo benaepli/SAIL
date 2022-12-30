@@ -1,5 +1,11 @@
-#include "../utils/Overload.h"
+#include "Token/LiteralType.h"
+
+#include <vcruntime.h>
+
 #include "Token/Token.h"
+#include "ankerl/unordered_dense.h"
+#include "utils/Overload.h"
+#include "utils/hash.h"
 
 namespace sail
 {
@@ -48,4 +54,43 @@ namespace sail
 
         return os;
     }
+
+    static auto hash(const std::string& str) -> size_t;
+    static auto hash(double num) -> size_t;
+    static auto hash(bool b) -> size_t;
+    static auto hash(const Types::Null& n) -> size_t;
+
+    static auto hash(const LiteralType& literal) -> size_t
+    {
+        return std::visit(
+            Overload {
+                [&](const std::string& str) { return hash(str); },
+                [&](const double& num) { return hash(num); },
+                [&](const bool& b) { return hash(b); },
+                [&](const Types::Null& n) { return hash(n); },
+            },
+            literal);
+    }
+
+    static auto hash(const std::string& str) -> size_t
+    {
+        return ankerl::unordered_dense::hash<std::string> {}(str);
+    }
+
+    static auto hash(double num) -> size_t
+    {
+        return ankerl::unordered_dense::hash<double> {}(num);
+    }
+
+    static auto hash(bool b) -> size_t
+    {
+        return ankerl::unordered_dense::hash<bool> {}(b);
+    }
+
+    static auto hash(const Types::Null& /*unused*/) -> size_t
+    {
+        return 0;
+    }
 }  // namespace sail
+
+SAIL_HASH_DEFINITION(sail::LiteralType, sail::hash)

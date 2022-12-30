@@ -3,15 +3,14 @@
 #include <memory>
 #include <vector>
 
-#include "Environment/Environment.h"
 #include "Statements/FunctionStatement.h"
 #include "Statements/Statement.h"
-#include "Types/Value.h"
 
 namespace sail
 {
     class Interpreter;
     class Environment;
+    class Value;
 }  // namespace sail
 
 namespace sail::Types
@@ -21,11 +20,6 @@ namespace sail::Types
       public:
         Callable() = default;
         virtual ~Callable() = default;
-
-        Callable(const Callable& other) = default;
-        auto operator=(const Callable& other) -> Callable& = default;
-        Callable(Callable&& other) = default;
-        auto operator=(Callable&& other) -> Callable& = default;
 
         virtual auto call(Interpreter& interpreter,
                           std::vector<Value>& arguments) -> Value = 0;

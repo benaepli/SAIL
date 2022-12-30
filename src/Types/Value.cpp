@@ -1,8 +1,8 @@
 #include "Types/Value.h"
 
-#include "../utils/Overload.h"
 #include "Token/LiteralType.h"
 #include "Types/Types.h"
+#include "utils/Overload.h"
 
 namespace sail
 {
@@ -13,9 +13,11 @@ namespace sail
                       { return !str.empty(); },
                       [](const double& num) -> bool { return num != 0; },
                       [](const bool& val) -> bool { return val; },
+                      [](const Types::Null&) -> bool { return false; },
                       [](const CallablePointer& function) -> bool
                       { return function != nullptr; },
-                      [](const Types::Null&) -> bool { return false; }},
+                      [](const InstancePointer& instance) -> bool
+                      { return instance != nullptr; }},
             *this);
     }
 
@@ -66,13 +68,18 @@ namespace sail
                           return std::holds_alternative<bool>(other)
                               && val == std::get<bool>(other);
                       },
+                      [&](const Types::Null&)
+                      { return std::holds_alternative<Types::Null>(other); },
                       [&](const CallablePointer& function)
                       {
                           return std::holds_alternative<CallablePointer>(other)
                               && function == std::get<CallablePointer>(other);
                       },
-                      [&](const Types::Null&)
-                      { return std::holds_alternative<Types::Null>(other); }},
+                      [&](const InstancePointer& instance)
+                      {
+                          return std::holds_alternative<InstancePointer>(other)
+                              && instance == std::get<InstancePointer>(other);
+                      }},
             *this);
     }
 
@@ -88,12 +95,11 @@ namespace sail
                              },
                              [&](const double& num) { ostr << num; },
                              [&](const bool& b) { ostr << b; },
+                             [&](const Types::Null& null) { ostr << "null"; },
                              [&](const CallablePointer& callable)
-                             {
-                                 ostr << "<fn " << callable->name() << ">";
-                                 // TODO: Print function name
-                             },
-                             [&](const Types::Null& null) { ostr << "null"; }},
+                             { ostr << "<fn " << callable->name() << ">"; },
+                             [&](const InstancePointer& instance)
+                             { ostr << instance->toString(); }},
                    value);
 
         return ostr;

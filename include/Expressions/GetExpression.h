@@ -4,11 +4,11 @@
 
 namespace sail::Expressions
 {
-    struct Assignment
+    struct Get
     {
-        std::unique_ptr<Expression> value;
+        std::unique_ptr<Expression> object;
         Token name;
 
-        auto operator==(const Assignment& other) const -> bool;
+        auto operator==(const Get& other) const -> bool;
     };
 }  // namespace sail::Expressions

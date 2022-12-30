@@ -2,9 +2,9 @@
 
 #include <fmt/format.h>
 
-#include "../utils/Overload.h"
 #include "Errors/RuntimeError.h"
 #include "Interpreter/Interpreter.h"
+#include "utils/Overload.h"
 
 namespace sail
 {
@@ -27,6 +27,8 @@ namespace sail
             Overload {
                 [this](Statements::Block& statement) -> void
                 { blockStatement(statement); },
+                [this](Statements::Class& statement) -> void
+                { classStatement(statement); },
                 [this](Statements::Expression& statement) -> void
                 { expressionStatement(statement); },
                 [this](Statements::Function& statement) -> void
@@ -53,12 +55,18 @@ namespace sail
                 { binaryExpression(expression); },
                 [this](Expressions::Call& expression) -> void
                 { callExpression(expression); },
+                [this](Expressions::Get& expression) -> void
+                { getExpression(expression); },
                 [this](Expressions::Grouping& expression) -> void
                 { groupingExpression(expression); },
                 [this](Expressions::Literal& expression) -> void
                 { literalExpression(expression); },
                 [this](Expressions::Logical& expression) -> void
                 { logicalExpression(expression); },
+                [this](Expressions::Set& expression) -> void
+                { setExpression(expression); },
+                [this, &expression](Expressions::This& thisExpr) -> void
+                { thisExpression(thisExpr, expression); },
                 [this](Expressions::Unary& expression) -> void
                 { unaryExpression(expression); },
                 [this, &expression](Expressions::Variable& variable) -> void
@@ -72,6 +80,29 @@ namespace sail
         beginScope();
         resolve(block.statements);
         endScope();
+    }
+
+    void Resolver::classStatement(Statements::Class& classStatement)
+    {
+        ClassType enclosingClass = _currentClass;
+        _currentClass = ClassType::eClass;
+
+        declare(classStatement.name);
+        define(classStatement.name);
+
+        beginScope();
+        _scopes.top()["this"] = true;
+
+        for (std::unique_ptr<Statement>& method : classStatement.methods)
+        {
+            FunctionType functionType = FunctionType::eMethod;
+            auto& function = std::get<Statements::Function>(*method);
+            resolveFunction(function, functionType);
+        }
+
+        endScope();
+
+        _currentClass = enclosingClass;
     }
 
     void Resolver::expressionStatement(Statements::Expression& expression)
@@ -148,6 +179,11 @@ namespace sail
         }
     }
 
+    void Resolver::getExpression(Expressions::Get& get)
+    {
+        resolve(*get.object);
+    }
+
     void Resolver::groupingExpression(Expressions::Grouping& grouping)
     {
         resolve(*grouping.expression);
@@ -159,6 +195,24 @@ namespace sail
     {
         resolve(*logical.left);
         resolve(*logical.right);
+    }
+
+    void Resolver::setExpression(Expressions::Set& set)
+    {
+        resolve(*set.value);
+        resolve(*set.object);
+    }
+
+    void Resolver::thisExpression(Expressions::This& thisExpression,
+                                  Expression& expression)
+    {
+        if (_currentClass == ClassType::eNone)
+        {
+            throw RuntimeError(thisExpression.keyword,
+                               "Cannot use 'this' outside of a class.");
+        }
+
+        resolveLocal(expression, thisExpression.keyword);
     }
 
     void Resolver::unaryExpression(Expressions::Unary& unary)

@@ -12,5 +12,7 @@ namespace sail::Expressions
         std::unique_ptr<Expression> callee;
         std::vector<std::unique_ptr<Expression>> arguments;
         Token paren;
+
+        auto operator==(const Call& other) const -> bool;
     };
 }  // namespace sail::Expressions

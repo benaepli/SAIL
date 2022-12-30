@@ -41,6 +41,7 @@ namespace sail
 
         // Statement execution
         auto blockStatement(Statements::Block& statement) -> void;
+        auto classStatement(Statements::Class& statement) -> void;
         auto expressionStatement(Statements::Expression& statement) -> void;
         auto functionStatement(Statements::Function& statement) -> void;
         auto ifStatement(Statements::If& statement) -> void;
@@ -52,6 +53,8 @@ namespace sail
         auto assignmentExpression(Expressions::Assignment& assignment,
                                   Expression& expression) -> Value;
         auto callExpression(Expressions::Call& expression) -> Value;
+        auto getExpression(Expressions::Get& expression) -> Value;
+        auto setExpression(Expressions::Set& expression) -> Value;
         auto literalExpression(Expressions::Literal& expression) -> Value;
         auto logicalExpression(Expressions::Logical& expression) -> Value;
         auto groupingExpression(Expressions::Grouping& expression) -> Value;
@@ -59,9 +62,13 @@ namespace sail
         auto binaryExpression(Expressions::Binary& expression) -> Value;
         auto variableExpression(Expressions::Variable& variable,
                                 Expression& expression) -> Value;
+        auto thisExpression(Expressions::This& thisExpr, Expression& expression)
+            -> Value;
+
+        auto lookupVariable(Token& name, Expression& expression) -> Value;
 
         std::shared_ptr<Environment> _globalEnvironment;
         std::shared_ptr<Environment> _environment;
-        ankerl::unordered_dense::map<Expression*, size_t> _locals;
+        ankerl::unordered_dense::map<Expression, size_t> _locals;
     };
 }  // namespace sail

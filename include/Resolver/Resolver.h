@@ -12,10 +12,17 @@ namespace sail
 {
     class Interpreter;
 
+    enum class ClassType
+    {
+        eNone,
+        eClass,
+    };
+
     enum class FunctionType
     {
         eNone,
         eFunction,
+        eMethod,
     };
 
     class Resolver
@@ -29,6 +36,7 @@ namespace sail
 
       private:
         void blockStatement(Statements::Block& block);
+        void classStatement(Statements::Class& classStatement);
         void expressionStatement(Statements::Expression& expression);
         void functionStatement(Statements::Function& function);
         void ifStatement(Statements::If& ifStatement);
@@ -40,9 +48,13 @@ namespace sail
                                   Expression& expression);
         void binaryExpression(Expressions::Binary& binary);
         void callExpression(Expressions::Call& call);
+        void getExpression(Expressions::Get& get);
         void groupingExpression(Expressions::Grouping& grouping);
         void literalExpression(Expressions::Literal& literal);
         void logicalExpression(Expressions::Logical& logical);
+        void setExpression(Expressions::Set& set);
+        void thisExpression(Expressions::This& thisExpression,
+                            Expression& expression);
         void unaryExpression(Expressions::Unary& unary);
         void variableExpression(Expressions::Variable& variable,
                                 Expression& expression);
@@ -56,6 +68,7 @@ namespace sail
 
         Interpreter& _interpreter;
         std::stack<ankerl::unordered_dense::map<std::string, bool>> _scopes;
+        ClassType _currentClass = ClassType::eNone;
         FunctionType _currentFunction = FunctionType::eNone;
     };
 }  // namespace sail

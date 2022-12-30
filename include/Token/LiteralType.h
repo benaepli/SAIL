@@ -6,6 +6,7 @@
 #include <variant>
 
 #include "Types/NullType.h"
+#include "utils/hash.h"
 
 namespace sail
 {
@@ -22,3 +23,5 @@ namespace sail
             -> std::ostream&;
     };
 }  // namespace sail
+
+SAIL_HASH_DECLARATION(sail::LiteralType)

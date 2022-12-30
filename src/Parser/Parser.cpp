@@ -41,14 +41,19 @@ namespace sail
 
     auto Parser::declaration() -> std::unique_ptr<Statement>
     {
-        if (match({TokenType::eFn}))
+        if (match({TokenType::eClass}))
         {
-            return functionStatement();
+            return classDeclaration();
         }
 
         if (match({TokenType::eLet}))
         {
             return varDeclaration();
+        }
+
+        if (match({TokenType::eFn}))
+        {
+            return functionStatement();
         }
 
         if (match({TokenType::eLeftBrace}))
@@ -78,6 +83,22 @@ namespace sail
 
         return expressionStatement();
     };
+
+    auto Parser::classDeclaration() -> std::unique_ptr<Statement>
+    {
+        Token name = consume(TokenType::eIdentifier, "Expect class name.");
+        consume(TokenType::eLeftBrace, "Expect '{' before class body.");
+
+        std::vector<std::unique_ptr<Statement>> methods {};
+        while (!check(TokenType::eRightBrace) && !isAtEnd())
+        {
+            methods.push_back(std::move(functionStatement()));
+        }
+
+        consume(TokenType::eRightBrace, "Expect '}' after class body.");
+        return std::make_unique<Statement>(
+            Statements::Class {name, std::move(methods)});
+    }
 
     auto Parser::varDeclaration() -> std::unique_ptr<Statement>
     {
@@ -281,6 +302,11 @@ namespace sail
                 return std::make_unique<Expression>(
                     Expressions::Assignment {std::move(value), name});
             }
+            if (auto* get = std::get_if<Expressions::Get>(&*expr))
+            {
+                return std::make_unique<Expression>(Expressions::Set {
+                    std::move(get->object), get->name, std::move(value)});
+            }
             throw ParserError(equals, "Invalid assignment target");
         }
 
@@ -403,6 +429,13 @@ namespace sail
             {
                 expr = finishCall(std::move(expr));
             }
+            else if (match({TokenType::eDot}))
+            {
+                Token name = consume(TokenType::eIdentifier,
+                                     "Expect property name after '.'.");
+                expr = std::make_unique<Expression>(
+                    Expressions::Get {std::move(expr), name});
+            }
             else
             {
                 break;
@@ -454,6 +487,11 @@ namespace sail
         {
             return std::make_unique<Expression>(
                 Expressions::Literal {previous().literal});
+        }
+
+        if (match({TokenType::eThis}))
+        {
+            return std::make_unique<Expression>(Expressions::This {previous()});
         }
 
         if (match({TokenType::eIdentifier}))

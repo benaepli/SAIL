@@ -10,5 +10,7 @@ namespace sail::Expressions
         std::unique_ptr<Expression> left;
         std::unique_ptr<Expression> right;
         Token oper;
+
+        auto operator==(const Logical& other) const -> bool;
     };
 }  // namespace sail::Expressions

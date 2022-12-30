@@ -7,6 +7,7 @@ namespace sail
     namespace Statements
     {
         struct Block;
+        struct Class;
         struct Expression;
         struct Function;
         struct If;
@@ -16,6 +17,7 @@ namespace sail
     }  // namespace Statements
 
     using Statement = std::variant<Statements::Block,
+                                   Statements::Class,
                                    Statements::Expression,
                                    Statements::Function,
                                    Statements::If,

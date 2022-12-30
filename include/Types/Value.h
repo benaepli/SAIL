@@ -6,20 +6,22 @@
 #include <string>
 #include <variant>
 
+#include "CallableType.h"
+#include "GarbageCollection/GarbageCollection.h"
+#include "InstanceType.h"
 #include "NullType.h"
 
 namespace sail
 {
-
-    namespace Types
-    {
-        struct Callable;
-    }  // namespace Types
-
     using CallablePointer = std::shared_ptr<Types::Callable>;
+    using InstancePointer = std::shared_ptr<Types::Instance>;
 
-    using ValueVariantType =
-        std::variant<std::string, double, bool, CallablePointer, Types::Null>;
+    using ValueVariantType = std::variant<std::string,
+                                          double,
+                                          bool,
+                                          Types::Null,
+                                          CallablePointer,
+                                          InstancePointer>;
 
     struct LiteralType;
 

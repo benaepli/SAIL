@@ -20,6 +20,7 @@ namespace sail
       private:
         auto statement() -> std::unique_ptr<Statement>;
         auto declaration() -> std::unique_ptr<Statement>;
+        auto classDeclaration() -> std::unique_ptr<Statement>;
         auto varDeclaration() -> std::unique_ptr<Statement>;
         auto blockStatement() -> std::unique_ptr<Statement>;
         auto expressionStatement() -> std::unique_ptr<Statement>;

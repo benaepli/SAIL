@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BlockStatement.h"
+#include "ClassStatement.h"
 #include "ExpressionStatement.h"
 #include "FunctionStatement.h"
 #include "IfStatement.h"

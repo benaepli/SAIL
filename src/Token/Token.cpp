@@ -4,6 +4,9 @@
 
 #include <magic_enum.hpp>
 
+#include "Token/LiteralType.h"
+#include "utils/hash.h"
+
 namespace sail
 {
 
@@ -28,4 +31,14 @@ namespace sail
 
         return os;
     }
+
+    auto Token::operator==(const Token& other) const -> bool
+    {
+        return type == other.type && lexeme == other.lexeme
+            && literal == other.literal && line == other.line;
+    }
+
 }  // namespace sail
+
+SAIL_MAKE_HASHABLE_DEFINITION(
+    sail::Token, val.type, val.lexeme, val.literal, val.line)

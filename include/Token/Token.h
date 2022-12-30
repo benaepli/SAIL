@@ -5,6 +5,7 @@
 #include <variant>
 
 #include "Token/LiteralType.h"
+#include "utils/hash.h"
 
 namespace sail
 {
@@ -66,14 +67,18 @@ namespace sail
 
     struct Token
     {
-        TokenType type;
+        TokenType type {};
         std::string lexeme;
         LiteralType literal = "";
-        size_t line;
+        size_t line {};
 
         auto hasLiteral() const -> bool;
 
         friend auto operator<<(std::ostream& os, const Token& token)
             -> std::ostream&;
+
+        auto operator==(const Token& other) const -> bool;
     };
 }  // namespace sail
+
+SAIL_HASH_DECLARATION(sail::Token)

@@ -1,13 +1,13 @@
 #include <algorithm>
 #include <any>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 #include <variant>
 
 #include "Interpreter/Interpreter.h"
 
-#include "../utils/Overload.h"
 #include "Errors/RuntimeError.h"
 #include "Expressions/Expression.h"
 #include "Expressions/Expressions.h"
@@ -15,8 +15,12 @@
 #include "Native/DefineNative.h"
 #include "Statements/Statements.h"
 #include "Token/Token.h"
+#include "Types/CallableType.h"
+#include "Types/FunctionType.h"
+#include "Types/Types.h"
 #include "Types/Value.h"
 #include "fmt/format.h"
+#include "utils/Overload.h"
 
 namespace sail
 {
@@ -40,6 +44,8 @@ namespace sail
             Overload {
                 [this](Statements::Block& statement) -> void
                 { blockStatement(statement); },
+                [this](Statements::Class& statement) -> void
+                { classStatement(statement); },
                 [this](Statements::Expression& statement) -> void
                 { expressionStatement(statement); },
                 [this](Statements::Function& statement) -> void
@@ -65,10 +71,14 @@ namespace sail
                 { return assignmentExpression(assignment, expression); },
                 [this](Expressions::Call& expression) -> Value
                 { return callExpression(expression); },
+                [this](Expressions::Get& expression) -> Value
+                { return getExpression(expression); },
                 [this](Expressions::Literal& expression) -> Value
                 { return literalExpression(expression); },
                 [this](Expressions::Logical& expression) -> Value
                 { return logicalExpression(expression); },
+                [this](Expressions::Set& expression) -> Value
+                { return setExpression(expression); },
                 [this](Expressions::Grouping& expression) -> Value
                 { return groupingExpression(expression); },
                 [this](Expressions::Unary& expression) -> Value
@@ -76,7 +86,10 @@ namespace sail
                 [this](Expressions::Binary& expression) -> Value
                 { return binaryExpression(expression); },
                 [this, &expression](Expressions::Variable& variable) -> Value
-                { return variableExpression(variable, expression); }},
+                { return variableExpression(variable, expression); },
+                [this, &expression](Expressions::This& thisExpr) -> Value
+                { return thisExpression(thisExpr, expression); },
+            },
             expression);
     }
 
@@ -101,7 +114,27 @@ namespace sail
 
     void Interpreter::resolve(Expression& expression, size_t depth)
     {
-        _locals[&expression] = depth;
+        _locals[expression] = depth;
+    }
+
+    void Interpreter::classStatement(Statements::Class& statement)
+    {
+        _environment->define(statement.name.lexeme, Types::Null {});
+
+        ankerl::unordered_dense::map<std::string,
+                                     std::shared_ptr<Types::Function>>
+            methods;
+        for (std::unique_ptr<Statement>& method : statement.methods)
+        {
+            auto& functionStatement = std::get<Statements::Function>(*method);
+            auto function = std::make_shared<Types::Function>(
+                std::move(functionStatement), _environment);
+            methods[function->name()] = function;
+        }
+
+        auto klass = std::make_shared<Types::Class>(statement.name.lexeme,
+                                                    std::move(methods));
+        _environment->assign(statement.name, klass);
     }
 
     void Interpreter::expressionStatement(Statements::Expression& statement)
@@ -111,8 +144,9 @@ namespace sail
 
     void Interpreter::functionStatement(Statements::Function& statement)
     {
-        auto function = std::make_shared<Types::Function>(std::move(statement),
-                                                          _environment);
+        std::shared_ptr<Types::Function> function =
+            std::make_shared<Types::Function>(std::move(statement),
+                                              _environment);
         _environment->define(function->name(), function);
     }
 
@@ -165,9 +199,9 @@ namespace sail
     {
         Value value = evaluate(*assignment.value);
 
-        if (_locals.contains(&expression))
+        if (_locals.contains(expression))
         {
-            size_t distance = _locals[&expression];
+            size_t distance = _locals[expression];
             _environment->assignAt(distance, assignment.name, value);
         }
         else
@@ -313,8 +347,9 @@ namespace sail
         { arguments.push_back(evaluate(*argument)); };
         std::ranges::for_each(expression.arguments, each);
 
-        if (std::shared_ptr<Types::Callable>* callablePointer =
-                std::get_if<std::shared_ptr<Types::Callable>>(&callee))
+        auto* callablePointer =
+            std::get_if<std::shared_ptr<Types::Callable>>(&callee);
+        if (callablePointer != nullptr)
         {
             std::shared_ptr<Types::Callable> callable = *callablePointer;
             size_t arity = callable->arity();
@@ -336,13 +371,47 @@ namespace sail
     auto Interpreter::variableExpression(Expressions::Variable& variable,
                                          Expression& expression) -> Value
     {
-        if (_locals.contains(&expression))
-        {
-            size_t distance = _locals[&expression];
-            return _environment->getAt(distance, variable.name);
-        }
-
-        return _environment->get(variable.name);
+        return lookupVariable(variable.name, expression);
     }
 
+    auto Interpreter::getExpression(Expressions::Get& expression) -> Value
+    {
+        Value object = evaluate(*expression.object);
+        auto* instance = std::get_if<std::shared_ptr<Types::Instance>>(&object);
+        if (instance != nullptr)
+        {
+            return (*instance)->get(expression.name);
+        }
+        throw RuntimeError(expression.name, "Only instances have properties");
+    }
+
+    auto Interpreter::setExpression(Expressions::Set& expression) -> Value
+    {
+        Value object = evaluate(*expression.object);
+        auto* instance = std::get_if<std::shared_ptr<Types::Instance>>(&object);
+        if (instance != nullptr)
+        {
+            Value value = evaluate(*expression.value);
+            (*instance)->set(expression.name, value);
+            return value;
+        }
+        throw RuntimeError(expression.name, "Only instances have fields");
+    }
+
+    auto Interpreter::thisExpression(Expressions::This& thisExpr,
+                                     Expression& expression) -> Value
+    {
+        return lookupVariable(thisExpr.keyword, expression);
+    }
+
+    auto Interpreter::lookupVariable(Token& name, Expression& expression)
+        -> Value
+    {
+        if (_locals.contains(expression))
+        {
+            size_t distance = _locals[expression];
+            return _environment->getAt(distance, name);
+        }
+        return _globalEnvironment->get(name);
+    }
 }  // namespace sail
