@@ -1,5 +1,6 @@
 #include "Types/ClassType.h"
 
+#include "Types/FunctionType.h"
 #include "Types/InstanceType.h"
 #include "Types/Value.h"
 
@@ -18,12 +19,24 @@ namespace sail::Types
     auto Class::call(Interpreter& interpreter, std::vector<Value>& arguments) -> Value
     {
         auto instance = std::make_shared<Instance>(shared_from_this());
+        auto initializer = findMemberFunction("init");
+        if (initializer != nullptr)
+        {
+            initializer->call(interpreter, arguments, instance);
+        }
+
         return {instance};
     }
 
     auto Class::arity() const -> size_t
     {
-        return 0;
+        auto initializer = findMemberFunction("init");
+        if (initializer == nullptr)
+        {
+            return 0;
+        }
+
+        return initializer->arity();
     }
 
     auto Class::name() const -> std::string const&

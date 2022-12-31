@@ -1,10 +1,12 @@
-add_rules("mode.debug", "mode.release")
+add_rules("mode.debug", "mode.release", "mode.releasedbg")
 
-add_requires("fmt", "magic_enum", "unordered_dense v3.0.0")
+add_requires("fmt", "magic_enum", "mimalloc", "unordered_dense v3.0.0")
 
 set_project("SAIL")
 set_version("0.1.0")
 set_languages("c++20")
+
+add_rules("plugin.vsxmake.autoupdate")
 
 target("SAIL_lib")
     set_kind("static")
@@ -13,7 +15,7 @@ target("SAIL_lib")
     add_headerfiles("include/**.h")
     add_includedirs("include")
     
-    add_packages("fmt", "magic_enum", "unordered_dense")
+    add_packages("fmt", "magic_enum", "mimalloc", "unordered_dense")
 
     if is_mode("debug") then
         add_defines("SAIL_DEBUG")

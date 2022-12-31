@@ -23,15 +23,15 @@ namespace sail::Types
             return _fields[name.lexeme];
         }
 
-        std::shared_ptr<Function> function =
-            _klass->findMemberFunction(name.lexeme);
+        std::shared_ptr<Function> function = _klass->findMemberFunction(name.lexeme);
         if (function != nullptr)
         {
-            return {std::make_shared<Method>(shared_from_this(), function)};
+            auto method = std::make_shared<Method>(shared_from_this(), function);
+            set(name, {method});
+            return {method};
         }
 
-        throw RuntimeError(
-            name, fmt::format("Undefined property '{}'.", name.lexeme));
+        throw RuntimeError(name, fmt::format("Undefined property '{}'.", name.lexeme));
     }
 
     auto Instance::set(const Token& name, Value value) -> void

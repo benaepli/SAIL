@@ -115,6 +115,11 @@ namespace sail
         for (std::shared_ptr<Statements::Function>& method : classStatement->methods)
         {
             FunctionType functionType = FunctionType::eMethod;
+            if (method->possibleInitializer)
+            {
+                functionType = FunctionType::eInitializer;
+            }
+
             resolveFunction(method, functionType);
         }
 
@@ -154,6 +159,12 @@ namespace sail
 
         if (!expressionIsNullptr(returnStatement->value))
         {
+            if (_currentFunction == FunctionType::eInitializer)
+            {
+                throw RuntimeError(returnStatement->keyword,
+                                   "Cannot return a value from an initializer.");
+            }
+
             resolve(returnStatement->value);
         }
     }
@@ -245,7 +256,7 @@ namespace sail
     void Resolver::thisExpression(std::shared_ptr<Expressions::This>& thisExpr)
     {
         const bool isInClass = static_cast<bool>(_currentClass & ClassType::eClass);
-        if (isInClass)
+        if (!isInClass)
         {
             throw RuntimeError(thisExpr->keyword, "Cannot use 'this' outside of a class.");
         }
@@ -333,7 +344,7 @@ namespace sail
             define(param);
         }
 
-        if (type == FunctionType::eMethod)
+        if (type == FunctionType::eMethod || type == FunctionType::eInitializer)
         {
             _scopes.back().emplace("this", true);
 

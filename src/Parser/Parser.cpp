@@ -170,7 +170,10 @@ namespace sail
         consume(TokenType::eRightParen, "Expected ')' after parameters");
         consume(TokenType::eLeftBrace, "Expected '{' before function body");
         std::vector<Statement> body = block();
-        return std::make_shared<Statements::Function>(name, parameters, body);
+
+        bool possibleInitializer = name.lexeme == "init";
+
+        return std::make_shared<Statements::Function>(name, parameters, body, possibleInitializer);
     }
 
     auto Parser::returnStatement() -> Statement

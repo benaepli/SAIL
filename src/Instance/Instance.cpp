@@ -7,14 +7,12 @@
 #include "Parser/Parser.h"
 #include "Resolver/Resolver.h"
 #include "Scanner/Scanner.h"
+#include "mimalloc-new-delete.h"
 
 namespace sail
 {
-
     Instance::Instance()
-        : _interpreter(new Interpreter())
-    {
-    }
+        : _interpreter(new Interpreter()) { }
 
     Instance::~Instance()
     {
@@ -71,15 +69,17 @@ namespace sail
     void Instance::run(const std::string& source)
     {
         std::vector<Token> tokens;
-        Scanner scanner {source, tokens};
+        Scanner scanner{source, tokens};
         scanner.scanTokens();
 
-        Parser parser {tokens};
+        Parser parser{tokens};
         std::vector<Statement> statements = parser.parse();
 
-        Resolver resolver {*_interpreter};
+        Resolver resolver{*_interpreter};
         resolver.resolve(statements);
 
         _interpreter->interpret(statements);
+
+        // end here
     }
-}  // namespace sail
+} // namespace sail

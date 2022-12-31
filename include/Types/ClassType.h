@@ -26,6 +26,7 @@ namespace sail::Types
         auto name() const -> std::string const& override;
 
         auto findMemberFunction(const std::string& name) const -> std::shared_ptr<Function>;
+        auto superclass() const -> std::shared_ptr<Types::Class> const& { return _superclass; }
 
       private:
         std::string _name;

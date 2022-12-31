@@ -27,7 +27,7 @@ namespace sail
 {
     Interpreter::Interpreter()
         : _globalEnvironment(std::make_unique<Environment>())
-        , _environment(_globalEnvironment)
+          , _environment(_globalEnvironment)
     {
         defineNativeFunctions(*_globalEnvironment);
     }
@@ -41,23 +41,39 @@ namespace sail
     void Interpreter::execute(Statement& statement)
     {
         std::visit(
-            Overload {
+            Overload{
                 [this](std::shared_ptr<Statements::Block>& statement) -> void
-                { blockStatement(statement); },
+                {
+                    blockStatement(statement);
+                },
                 [this](std::shared_ptr<Statements::Class>& statement) -> void
-                { classStatement(statement); },
+                {
+                    classStatement(statement);
+                },
                 [this](std::shared_ptr<Statements::Expression>& statement) -> void
-                { expressionStatement(statement); },
+                {
+                    expressionStatement(statement);
+                },
                 [this](std::shared_ptr<Statements::Function>& statement) -> void
-                { functionStatement(statement); },
+                {
+                    functionStatement(statement);
+                },
                 [this](std::shared_ptr<Statements::If>& statement) -> void
-                { ifStatement(statement); },
+                {
+                    ifStatement(statement);
+                },
                 [this](std::shared_ptr<Statements::Return>& statement) -> void
-                { returnStatement(statement); },
+                {
+                    returnStatement(statement);
+                },
                 [this](std::shared_ptr<Statements::Variable>& statement) -> void
-                { variableStatement(statement); },
+                {
+                    variableStatement(statement);
+                },
                 [this](std::shared_ptr<Statements::While>& statement) -> void
-                { whileStatement(statement); },
+                {
+                    whileStatement(statement);
+                },
             },
             statement);
     }
@@ -65,31 +81,55 @@ namespace sail
     auto Interpreter::evaluate(Expression& expression) -> Value
     {
         return std::visit(
-            Overload {
+            Overload{
                 [this](std::shared_ptr<Expressions::Assignment>& assignment) -> Value
-                { return assignmentExpression(assignment); },
+                {
+                    return assignmentExpression(assignment);
+                },
                 [this](std::shared_ptr<Expressions::Binary>& binary) -> Value
-                { return binaryExpression(binary); },
+                {
+                    return binaryExpression(binary);
+                },
                 [this](std::shared_ptr<Expressions::Call>& call) -> Value
-                { return callExpression(call); },
+                {
+                    return callExpression(call);
+                },
                 [this](std::shared_ptr<Expressions::Get>& get) -> Value
-                { return getExpression(get); },
+                {
+                    return getExpression(get);
+                },
                 [this](std::shared_ptr<Expressions::Grouping>& grouping) -> Value
-                { return groupingExpression(grouping); },
+                {
+                    return groupingExpression(grouping);
+                },
                 [this](std::shared_ptr<Expressions::Literal>& literal) -> Value
-                { return literalExpression(literal); },
+                {
+                    return literalExpression(literal);
+                },
                 [this](std::shared_ptr<Expressions::Logical>& logical) -> Value
-                { return logicalExpression(logical); },
+                {
+                    return logicalExpression(logical);
+                },
                 [this](std::shared_ptr<Expressions::Set>& set) -> Value
-                { return setExpression(set); },
+                {
+                    return setExpression(set);
+                },
                 [this](std::shared_ptr<Expressions::Super>& super) -> Value
-                { return superExpression(super); },
+                {
+                    return superExpression(super);
+                },
                 [this](std::shared_ptr<Expressions::This>& this_) -> Value
-                { return thisExpression(this_); },
+                {
+                    return thisExpression(this_);
+                },
                 [this](std::shared_ptr<Expressions::Unary>& unary) -> Value
-                { return unaryExpression(unary); },
+                {
+                    return unaryExpression(unary);
+                },
                 [this](std::shared_ptr<Expressions::Variable>& variable) -> Value
-                { return variableExpression(variable); },
+                {
+                    return variableExpression(variable);
+                },
 
             },
             expression);
@@ -103,13 +143,13 @@ namespace sail
     void Interpreter::executeBlock(std::vector<Statement>& statements,
                                    std::shared_ptr<Environment> environment)
     {
-        std::shared_ptr<Environment> previousEnvironment = _environment;
+        std::shared_ptr<Environment> previousEnvironment = std::move(_environment);
         _environment = std::move(environment);
 
         auto each = [&](auto& statement) -> void { execute(statement); };
         std::ranges::for_each(statements, each);
 
-        _environment = previousEnvironment;
+        _environment = std::move(previousEnvironment);
     }
 
     void Interpreter::resolve(Expression& expression, size_t depth)
@@ -122,7 +162,7 @@ namespace sail
         std::shared_ptr<Types::Class> superclass = nullptr;
         if (statement->superclass)
         {
-            Value superclassObject = Types::Null {};
+            Value superclassObject = Types::Null{};
             Expression superclassExpression = statement->superclass;
             superclassObject = evaluate(superclassExpression);
             auto* callable = std::get_if<std::shared_ptr<Types::Callable>>(&superclassObject);
@@ -138,28 +178,20 @@ namespace sail
             }
         }
 
-        _environment->define(statement->name.lexeme, Types::Null {});
-
-        if (superclass != nullptr)
-        {
-            _environment = std::make_shared<Environment>(_environment);
-            _environment->define("super", superclass);
-        }
+        _environment->define(statement->name.lexeme, Types::Null{});
 
         ankerl::unordered_dense::map<std::string, std::shared_ptr<Types::Function>> methods;
         for (std::shared_ptr<Statements::Function>& method : statement->methods)
         {
-            auto function = std::make_shared<Types::Function>(method, _environment);
+            auto function = std::make_shared<Types::Function>(
+                method,
+                _environment,
+                method->possibleInitializer);
             methods[function->name()] = function;
         }
 
         auto klass = std::make_shared<Types::Class>(statement->name.lexeme, superclass, methods);
         _environment->assign(statement->name, klass);
-
-        if (superclass != nullptr)
-        {
-            _environment = _environment->enclosing();
-        }
     }
 
     void Interpreter::expressionStatement(std::shared_ptr<Statements::Expression>& statement)
@@ -169,7 +201,7 @@ namespace sail
 
     void Interpreter::functionStatement(std::shared_ptr<Statements::Function>& statement)
     {
-        auto function = std::make_shared<Types::Function>(statement, _environment);
+        auto function = std::make_shared<Types::Function>(statement, _environment, false);
         _environment->define(function->name(), function);
     }
 
@@ -187,19 +219,19 @@ namespace sail
 
     void Interpreter::returnStatement(std::shared_ptr<Statements::Return>& statement)
     {
-        Value value = Types::Null {};
+        Value value = Types::Null{};
 
         if (!expressionIsNullptr(statement->value))
         {
             value = evaluate(statement->value);
         }
 
-        throw Return {value};
+        throw Return{value};
     }
 
     void Interpreter::variableStatement(std::shared_ptr<Statements::Variable>& statement)
     {
-        Value value = Types::Null {};
+        Value value = Types::Null{};
 
         if (!expressionIsNullptr(statement->initializer))
         {
@@ -218,7 +250,7 @@ namespace sail
     }
 
     auto Interpreter::assignmentExpression(std::shared_ptr<Expressions::Assignment>& assignment)
-        -> Value
+    -> Value
     {
         Value value = evaluate(assignment->value);
 
@@ -237,14 +269,14 @@ namespace sail
 
     auto Interpreter::literalExpression(std::shared_ptr<Expressions::Literal>& expression) -> Value
     {
-        Value value {};
+        Value value{};
 
         std::visit(
-            Overload {
+            Overload{
                 [&](const std::string& str) { value = str; },
                 [&](const double& num) { value = num; },
                 [&](const bool& val) { value = val; },
-                [&](const Types::Null&) { value = Types::Null {}; },
+                [&](const Types::Null&) { value = Types::Null{}; },
             },
             expression->literal);
 
@@ -258,21 +290,21 @@ namespace sail
         {
             if (left.isTruthy())
             {
-                return left;
+                return std::move(left);
             }
         }
         else
         {
             if (!left.isTruthy())
             {
-                return left;
+                return std::move(left);
             }
         }
         return evaluate(expression->right);
     }
 
     auto Interpreter::groupingExpression(std::shared_ptr<Expressions::Grouping>& expression)
-        -> Value
+    -> Value
     {
         return evaluate(expression->expression);
     }
@@ -293,7 +325,7 @@ namespace sail
             }
             case TokenType::eBang:
                 return !right.isTruthy();
-            default:;
+            default: ;
         }
 
         return {};
@@ -351,7 +383,7 @@ namespace sail
                 return leftValue < rightValue;
             case TokenType::eLessEqual:
                 return leftValue <= rightValue;
-            default:;
+            default: ;
         }
 
         throw RuntimeError(expression->oper, "Unknown operator");
@@ -374,7 +406,9 @@ namespace sail
                 throw RuntimeError(
                     expression->paren,
                     fmt::format(
-                        "Expected {} arguments but got {}", callable->arity(), arguments.size()));
+                        "Expected {} arguments but got {}",
+                        callable->arity(),
+                        arguments.size()));
             }
             return callable->call(*this, arguments);
         }
@@ -464,4 +498,4 @@ namespace sail
         }
         return _globalEnvironment->get(name);
     }
-}  // namespace sail
+} // namespace sail

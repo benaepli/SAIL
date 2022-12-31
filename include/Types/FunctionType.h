@@ -13,7 +13,9 @@ namespace sail::Types
     class Function : public Callable
     {
       public:
-        Function(std::shared_ptr<Statements::Function> body, std::shared_ptr<Environment> closure);
+        Function(std::shared_ptr<Statements::Function> body,
+                 std::shared_ptr<Environment> closure,
+                 bool isInitializer = false);
 
         auto call(Interpreter& interpreter, std::vector<Value>& arguments) -> Value override;
         auto call(Interpreter& interpreter,
@@ -29,5 +31,7 @@ namespace sail::Types
         std::shared_ptr<Statements::Function> _body;
         std::shared_ptr<Environment> _closure;
         std::shared_ptr<Environment> _localEnvironment;
+
+        bool _isInitializer;
     };
 }  // namespace sail::Types

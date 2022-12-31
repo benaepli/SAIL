@@ -8,9 +8,11 @@
 namespace sail::Types
 {
     Function::Function(std::shared_ptr<Statements::Function> body,
-                       std::shared_ptr<Environment> closure)
+                       std::shared_ptr<Environment> closure,
+                       bool isInitializer)
         : _body(std::move(body))
         , _closure(std::move(closure))
+        , _isInitializer(isInitializer)
         , _localEnvironment(std::make_shared<Environment>(_closure))
     {
     }
@@ -57,6 +59,11 @@ namespace sail::Types
         }
         catch (Return& returnValue)
         {
+            if (_isInitializer)
+            {
+                return _localEnvironment->getAt(0, "this");
+            }
+
             return returnValue.value();
         }
 

@@ -15,9 +15,9 @@ namespace sail
 
     enum class ClassType
     {
-        eNone = 1 << 0,
-        eClass = 1 << 1,
-        eSubclass = 1 << 2,
+        eNone = 1U << 0U,
+        eClass = 1U << 1U,
+        eSubclass = 1U << 2U,
     };
 
     enum class FunctionType
@@ -25,6 +25,7 @@ namespace sail
         eNone,
         eFunction,
         eMethod,
+        eInitializer,
     };
 
     class Resolver

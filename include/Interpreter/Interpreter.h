@@ -67,6 +67,6 @@ namespace sail
 
         std::shared_ptr<Environment> _globalEnvironment;
         std::shared_ptr<Environment> _environment;
-        std::unordered_map<Expression, size_t> _locals;
+        ankerl::unordered_dense::map<Expression, size_t> _locals;
     };
 }  // namespace sail

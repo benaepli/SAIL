@@ -122,19 +122,19 @@ namespace
 
 }  // namespace
 
-SAIL_HASH_DEFINITION(sail::Expressions::Assignment, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Binary, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Call, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Get, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Grouping, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Literal, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Logical, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Set, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Super, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::This, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Unary, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expressions::Variable, hashFunction)
-SAIL_HASH_DEFINITION(sail::Expression, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Assignment, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Binary, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Call, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Get, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Grouping, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Literal, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Logical, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Set, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Super, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::This, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Unary, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expressions::Variable, hashFunction)
+// SAIL_HASH_DEFINITION(sail::Expression, hashFunction)
 
 namespace sail::Expressions
 {

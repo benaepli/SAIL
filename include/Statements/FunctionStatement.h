@@ -12,5 +12,6 @@ namespace sail::Statements
         Token name;
         std::vector<Token> parameters;
         std::vector<Statement> body;
+        bool possibleInitializer = false;
     };
 }  // namespace sail::Statements
