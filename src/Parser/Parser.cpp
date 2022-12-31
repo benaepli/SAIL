@@ -6,6 +6,7 @@
 #include "Parser/Parser.h"
 
 #include "Errors/ParserError.h"
+#include "Expressions/Expression.h"
 #include "Expressions/Expressions.h"
 #include "Expressions/VariableExpression.h"
 #include "Statements/Statements.h"
@@ -88,6 +89,14 @@ namespace sail
     auto Parser::classDeclaration() -> Statement
     {
         Token name = consume(TokenType::eIdentifier, "Expect class name.");
+
+        std::shared_ptr<Expressions::Variable> superclass {};
+        if (match({TokenType::eLess}))
+        {
+            consume(TokenType::eIdentifier, "Expect superclass name.");
+            superclass = std::make_shared<Expressions::Variable>(previous());
+        }
+
         consume(TokenType::eLeftBrace, "Expect '{' before class body.");
 
         std::vector<std::shared_ptr<Statements::Function>> methods {};
@@ -97,7 +106,7 @@ namespace sail
         }
 
         consume(TokenType::eRightBrace, "Expect '}' after class body.");
-        return std::make_shared<Statements::Class>(name, methods);
+        return std::make_shared<Statements::Class>(name, superclass, methods);
     }
 
     auto Parser::varDeclaration() -> Statement
@@ -452,6 +461,14 @@ namespace sail
         if (match({TokenType::eNumber, TokenType::eString}))
         {
             return std::make_shared<Expressions::Literal>(previous().literal);
+        }
+
+        if (match({TokenType::eSuper}))
+        {
+            Token keyword = previous();
+            consume(TokenType::eDot, "Expected '.' after 'super'");
+            Token method = consume(TokenType::eIdentifier, "Expected superclass method name");
+            return std::make_shared<Expressions::Super>(keyword, method);
         }
 
         if (match({TokenType::eThis}))

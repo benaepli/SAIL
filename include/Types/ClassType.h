@@ -17,21 +17,19 @@ namespace sail::Types
       public:
         explicit Class(
             std::string name,
-            ankerl::unordered_dense::map<std::string, std::shared_ptr<Function>>
-                methods);
+            std::shared_ptr<Types::Class> superclass,
+            ankerl::unordered_dense::map<std::string, std::shared_ptr<Function>> methods);
 
-        auto call(Interpreter& interpreter, std::vector<Value>& arguments)
-            -> Value override;
+        auto call(Interpreter& interpreter, std::vector<Value>& arguments) -> Value override;
         auto arity() const -> size_t override;
 
         auto name() const -> std::string const& override;
 
-        auto findMemberFunction(const std::string& name) const
-            -> std::shared_ptr<Function>;
+        auto findMemberFunction(const std::string& name) const -> std::shared_ptr<Function>;
 
       private:
         std::string _name;
-        ankerl::unordered_dense::map<std::string, std::shared_ptr<Function>>
-            _methods;
+        std::shared_ptr<Types::Class> _superclass;
+        ankerl::unordered_dense::map<std::string, std::shared_ptr<Function>> _methods;
     };
 }  // namespace sail::Types

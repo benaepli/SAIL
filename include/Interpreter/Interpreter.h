@@ -61,6 +61,7 @@ namespace sail
         auto binaryExpression(std::shared_ptr<Expressions::Binary>& binary) -> Value;
         auto variableExpression(std::shared_ptr<Expressions::Variable>& variable) -> Value;
         auto thisExpression(std::shared_ptr<Expressions::This>& thisExpr) -> Value;
+        auto superExpression(std::shared_ptr<Expressions::Super>& super) -> Value;
 
         auto lookupVariable(Token& name, Expression& expression) -> Value;
 

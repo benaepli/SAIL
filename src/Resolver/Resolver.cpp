@@ -5,10 +5,13 @@
 #include "Errors/RuntimeError.h"
 #include "Expressions/Expressions.h"
 #include "Interpreter/Interpreter.h"
+#include "magic_enum.hpp"
 #include "utils/Overload.h"
 
 namespace sail
 {
+    using namespace magic_enum::bitwise_operators;
+
     Resolver::Resolver(Interpreter& interpreter)
         : _interpreter(interpreter)
     {
@@ -66,6 +69,8 @@ namespace sail
                 { logicalExpression(expression); },
                 [this](std::shared_ptr<Expressions::Set>& expression) -> void
                 { setExpression(expression); },
+                [this](std::shared_ptr<Expressions::Super>& expression) -> void
+                { superExpression(expression); },
                 [this](std::shared_ptr<Expressions::This>& expression) -> void
                 { thisExpression(expression); },
                 [this](std::shared_ptr<Expressions::Unary>& expression) -> void
@@ -91,8 +96,21 @@ namespace sail
         declare(classStatement->name);
         define(classStatement->name);
 
+        if (classStatement->superclass != nullptr)
+        {
+            if (classStatement->name.lexeme == classStatement->superclass->name.lexeme)
+            {
+                throw RuntimeError(classStatement->superclass->name,
+                                   "A class cannot inherit from itself");
+            }
+
+            Expression superclass = classStatement->superclass;
+            resolve(superclass);
+
+            _currentClass |= ClassType::eSubclass;
+        }
+
         beginScope();
-        _scopes.back().emplace("this", true);
 
         for (std::shared_ptr<Statements::Function>& method : classStatement->methods)
         {
@@ -206,9 +224,28 @@ namespace sail
         resolve(set->object);
     }
 
+    void Resolver::superExpression(std::shared_ptr<Expressions::Super>& super)
+    {
+        const bool isInClass = static_cast<bool>(_currentClass & ClassType::eClass);
+        if (!isInClass)
+        {
+            throw RuntimeError(super->keyword, "Cannot use 'super' outside of a class.");
+        }
+
+        const bool isInSubclass = static_cast<bool>(_currentClass & ClassType::eSubclass);
+        if (!isInSubclass)
+        {
+            throw RuntimeError(super->keyword, "Cannot use 'super' in a class with no superclass.");
+        }
+
+        Expression expression = super;
+        resolveLocal(expression, super->keyword);
+    }
+
     void Resolver::thisExpression(std::shared_ptr<Expressions::This>& thisExpr)
     {
-        if (_currentClass == ClassType::eNone)
+        const bool isInClass = static_cast<bool>(_currentClass & ClassType::eClass);
+        if (isInClass)
         {
             throw RuntimeError(thisExpr->keyword, "Cannot use 'this' outside of a class.");
         }
@@ -295,6 +332,18 @@ namespace sail
             declare(param);
             define(param);
         }
+
+        if (type == FunctionType::eMethod)
+        {
+            _scopes.back().emplace("this", true);
+
+            const bool isSubclass = static_cast<bool>(_currentClass & ClassType::eSubclass);
+            if (isSubclass)
+            {
+                _scopes.back().emplace("super", true);
+            }
+        }
+
         resolve(function->body);
         endScope();
 

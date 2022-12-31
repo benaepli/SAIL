@@ -45,12 +45,12 @@ namespace sail
 
     auto Environment::getAt(size_t distance, const std::string& name) -> Value&
     {
-        return ancestor(distance)->get(name);
+        return ancestor(distance)->_values[name];
     }
 
     auto Environment::getAt(size_t distance, const Token& name) -> Value&
     {
-        return ancestor(distance)->get(name);
+        return ancestor(distance)->_values[name.lexeme];
     }
 
     void Environment::define(const std::string& name, const Value& value)

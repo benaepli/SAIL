@@ -16,6 +16,7 @@ namespace
     auto hashFunction(const Expressions::Literal& literal) -> size_t;
     auto hashFunction(const Expressions::Logical& logical) -> size_t;
     auto hashFunction(const Expressions::Set& set) -> size_t;
+    auto hashFunction(const Expressions::Super& super) -> size_t;
     auto hashFunction(const Expressions::This& thisExpr) -> size_t;
     auto hashFunction(const Expressions::Unary& unary) -> size_t;
     auto hashFunction(const Expressions::Variable& variable) -> size_t;
@@ -91,6 +92,13 @@ namespace
         return seed;
     }
 
+    auto hashFunction(const Expressions::Super& super) -> size_t
+    {
+        size_t seed = 0;
+        utils::hashCombine(seed, super.keyword, super.method);
+        return seed;
+    }
+
     auto hashFunction(const Expressions::This& thisExpr) -> size_t
     {
         size_t seed = 0;
@@ -122,6 +130,7 @@ SAIL_HASH_DEFINITION(sail::Expressions::Grouping, hashFunction)
 SAIL_HASH_DEFINITION(sail::Expressions::Literal, hashFunction)
 SAIL_HASH_DEFINITION(sail::Expressions::Logical, hashFunction)
 SAIL_HASH_DEFINITION(sail::Expressions::Set, hashFunction)
+SAIL_HASH_DEFINITION(sail::Expressions::Super, hashFunction)
 SAIL_HASH_DEFINITION(sail::Expressions::This, hashFunction)
 SAIL_HASH_DEFINITION(sail::Expressions::Unary, hashFunction)
 SAIL_HASH_DEFINITION(sail::Expressions::Variable, hashFunction)

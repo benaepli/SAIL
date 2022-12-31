@@ -16,6 +16,7 @@ namespace sail
         struct Literal;
         struct Logical;
         struct Set;
+        struct Super;
         struct This;
         struct Unary;
         struct Variable;
@@ -29,6 +30,7 @@ namespace sail
                                     std::shared_ptr<Expressions::Literal>,
                                     std::shared_ptr<Expressions::Logical>,
                                     std::shared_ptr<Expressions::Set>,
+                                    std::shared_ptr<Expressions::Super>,
                                     std::shared_ptr<Expressions::This>,
                                     std::shared_ptr<Expressions::Unary>,
                                     std::shared_ptr<Expressions::Variable>>;

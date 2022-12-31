@@ -10,3 +10,24 @@
     showA();
   }
 }
+
+let f = 0;
+{
+  fn loop(n)
+  {
+    while (n < 2)
+    {
+      print(n);
+      n=n+1;
+    }
+  }
+
+  loop(f);
+  let f = -2;
+  loop(f);
+  f = 0;
+  {
+    let f = 3;
+    loop(f);
+  }
+}

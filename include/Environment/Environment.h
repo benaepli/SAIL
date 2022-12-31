@@ -21,6 +21,8 @@ namespace sail
         void assign(const Token& name, const Value& value);
         void assignAt(size_t distance, const Token& name, const Value& value);
 
+        auto enclosing() const -> std::shared_ptr<Environment> const& { return _enclosing; }
+
         void reset();
 
       private:

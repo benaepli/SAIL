@@ -5,17 +5,17 @@
 
 namespace sail::Types
 {
-    Class::Class(
-        std::string name,
-        ankerl::unordered_dense::map<std::string, std::shared_ptr<Function>>
-            methods)
+    Class::Class(std::string name,
+                 std::shared_ptr<Types::Class> superclass,
+
+                 ankerl::unordered_dense::map<std::string, std::shared_ptr<Function>> methods)
         : _name(std::move(name))
+        , _superclass(std::move(superclass))
         , _methods(std::move(methods))
     {
     }
 
-    auto Class::call(Interpreter& interpreter, std::vector<Value>& arguments)
-        -> Value
+    auto Class::call(Interpreter& interpreter, std::vector<Value>& arguments) -> Value
     {
         auto instance = std::make_shared<Instance>(shared_from_this());
         return {instance};
@@ -31,12 +31,16 @@ namespace sail::Types
         return _name;
     }
 
-    auto Class::findMemberFunction(const std::string& name) const
-        -> std::shared_ptr<Function>
+    auto Class::findMemberFunction(const std::string& name) const -> std::shared_ptr<Function>
     {
         if (_methods.contains(name))
         {
             return _methods.at(name);
+        }
+
+        if (_superclass != nullptr)
+        {
+            return _superclass->findMemberFunction(name);
         }
 
         return nullptr;

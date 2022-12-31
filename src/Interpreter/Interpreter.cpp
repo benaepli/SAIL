@@ -82,6 +82,8 @@ namespace sail
                 { return logicalExpression(logical); },
                 [this](std::shared_ptr<Expressions::Set>& set) -> Value
                 { return setExpression(set); },
+                [this](std::shared_ptr<Expressions::Super>& super) -> Value
+                { return superExpression(super); },
                 [this](std::shared_ptr<Expressions::This>& this_) -> Value
                 { return thisExpression(this_); },
                 [this](std::shared_ptr<Expressions::Unary>& unary) -> Value
@@ -117,7 +119,32 @@ namespace sail
 
     void Interpreter::classStatement(std::shared_ptr<Statements::Class>& statement)
     {
+        std::shared_ptr<Types::Class> superclass = nullptr;
+        if (statement->superclass)
+        {
+            Value superclassObject = Types::Null {};
+            Expression superclassExpression = statement->superclass;
+            superclassObject = evaluate(superclassExpression);
+            auto* callable = std::get_if<std::shared_ptr<Types::Callable>>(&superclassObject);
+            if (callable == nullptr)
+            {
+                throw RuntimeError(statement->superclass->name, "Superclass must be a class. (1)");
+            }
+
+            superclass = std::dynamic_pointer_cast<Types::Class>(*callable);
+            if (superclass == nullptr)
+            {
+                throw RuntimeError(statement->superclass->name, "Superclass must be a class. (2)");
+            }
+        }
+
         _environment->define(statement->name.lexeme, Types::Null {});
+
+        if (superclass != nullptr)
+        {
+            _environment = std::make_shared<Environment>(_environment);
+            _environment->define("super", superclass);
+        }
 
         ankerl::unordered_dense::map<std::string, std::shared_ptr<Types::Function>> methods;
         for (std::shared_ptr<Statements::Function>& method : statement->methods)
@@ -126,8 +153,13 @@ namespace sail
             methods[function->name()] = function;
         }
 
-        auto klass = std::make_shared<Types::Class>(statement->name.lexeme, methods);
+        auto klass = std::make_shared<Types::Class>(statement->name.lexeme, superclass, methods);
         _environment->assign(statement->name, klass);
+
+        if (superclass != nullptr)
+        {
+            _environment = _environment->enclosing();
+        }
     }
 
     void Interpreter::expressionStatement(std::shared_ptr<Statements::Expression>& statement)
@@ -378,6 +410,43 @@ namespace sail
             return value;
         }
         throw RuntimeError(expression->name, "Only instances have fields");
+    }
+
+    auto Interpreter::superExpression(std::shared_ptr<Expressions::Super>& super) -> Value
+    {
+        if (_locals.contains(super))
+        {
+            size_t distance = _locals.at(super);
+            Value superClassValue = _environment->getAt(distance, "super");
+            auto* superclassCallable =
+                std::get_if<std::shared_ptr<Types::Callable>>(&superClassValue);
+            if (superclassCallable == nullptr)
+            {
+                throw RuntimeError(super->keyword, "Superclass must be a class (3)");
+            }
+
+            auto superclass = std::dynamic_pointer_cast<Types::Class>(*superclassCallable);
+            if (!superclass)
+            {
+                throw RuntimeError(super->keyword, "Superclass must be a class (4)");
+            }
+
+            Value object = _environment->getAt(distance, "this");
+            auto* instance = std::get_if<std::shared_ptr<Types::Instance>>(&object);
+            if (instance == nullptr)
+            {
+                throw RuntimeError(super->keyword, "Superclass must be a class (5)");
+            }
+
+            std::shared_ptr<Types::Function> memberFunction =
+                superclass->findMemberFunction(super->method.lexeme);
+
+            std::shared_ptr<Types::Method> method =
+                std::make_shared<Types::Method>(*instance, memberFunction);
+            return method;
+        }
+
+        throw RuntimeError(super->keyword, "Superclass must be a class (6)");
     }
 
     auto Interpreter::thisExpression(std::shared_ptr<Expressions::This>& thisExpr) -> Value

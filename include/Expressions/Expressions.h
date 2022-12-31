@@ -8,6 +8,7 @@
 #include "LiteralExpression.h"
 #include "LogicalExpression.h"
 #include "SetExpression.h"
+#include "SuperExpression.h"
 #include "ThisExpression.h"
 #include "UnaryExpression.h"
 #include "VariableExpression.h"
@@ -22,6 +23,7 @@ SAIL_HASH_DECLARATION(sail::Expressions::Grouping)
 SAIL_HASH_DECLARATION(sail::Expressions::Literal)
 SAIL_HASH_DECLARATION(sail::Expressions::Logical)
 SAIL_HASH_DECLARATION(sail::Expressions::Set)
+SAIL_HASH_DECLARATION(sail::Expressions::Super)
 SAIL_HASH_DECLARATION(sail::Expressions::This)
 SAIL_HASH_DECLARATION(sail::Expressions::Unary)
 SAIL_HASH_DECLARATION(sail::Expressions::Variable)

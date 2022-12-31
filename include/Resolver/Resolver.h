@@ -15,8 +15,9 @@ namespace sail
 
     enum class ClassType
     {
-        eNone,
-        eClass,
+        eNone = 1 << 0,
+        eClass = 1 << 1,
+        eSubclass = 1 << 2,
     };
 
     enum class FunctionType
@@ -53,6 +54,7 @@ namespace sail
         void literalExpression(std::shared_ptr<Expressions::Literal>& literal);
         void logicalExpression(std::shared_ptr<Expressions::Logical>& logical);
         void setExpression(std::shared_ptr<Expressions::Set>& set);
+        void superExpression(std::shared_ptr<Expressions::Super>& super);
         void thisExpression(std::shared_ptr<Expressions::This>& thisExpr);
         void unaryExpression(std::shared_ptr<Expressions::Unary>& unary);
         void variableExpression(std::shared_ptr<Expressions::Variable>& variable);
