@@ -15,36 +15,35 @@ namespace sail
       public:
         explicit Parser(std::vector<Token>& tokens);
 
-        auto parse() -> std::vector<std::unique_ptr<Statement>>;
+        auto parse() -> std::vector<Statement>;
 
       private:
-        auto statement() -> std::unique_ptr<Statement>;
-        auto declaration() -> std::unique_ptr<Statement>;
-        auto classDeclaration() -> std::unique_ptr<Statement>;
-        auto varDeclaration() -> std::unique_ptr<Statement>;
-        auto blockStatement() -> std::unique_ptr<Statement>;
-        auto expressionStatement() -> std::unique_ptr<Statement>;
-        auto functionStatement() -> std::unique_ptr<Statement>;
-        auto whileStatement() -> std::unique_ptr<Statement>;
-        auto ifStatement() -> std::unique_ptr<Statement>;
-        auto forStatement() -> std::unique_ptr<Statement>;
-        auto returnStatement() -> std::unique_ptr<Statement>;
+        auto statement() -> Statement;
+        auto declaration() -> Statement;
+        auto classDeclaration() -> Statement;
+        auto varDeclaration() -> Statement;
+        auto blockStatement() -> Statement;
+        auto expressionStatement() -> Statement;
+        auto functionStatement() -> std::shared_ptr<Statements::Function>;
+        auto whileStatement() -> Statement;
+        auto ifStatement() -> Statement;
+        auto forStatement() -> Statement;
+        auto returnStatement() -> Statement;
 
-        auto expression() -> std::unique_ptr<Expression>;
-        auto assignment() -> std::unique_ptr<Expression>;
-        auto orExpression() -> std::unique_ptr<Expression>;
-        auto andExpression() -> std::unique_ptr<Expression>;
-        auto equality() -> std::unique_ptr<Expression>;
-        auto comparison() -> std::unique_ptr<Expression>;
-        auto term() -> std::unique_ptr<Expression>;
-        auto factor() -> std::unique_ptr<Expression>;
-        auto unary() -> std::unique_ptr<Expression>;
-        auto call() -> std::unique_ptr<Expression>;
-        auto primary() -> std::unique_ptr<Expression>;
+        auto expression() -> Expression;
+        auto assignment() -> Expression;
+        auto orExpression() -> Expression;
+        auto andExpression() -> Expression;
+        auto equality() -> Expression;
+        auto comparison() -> Expression;
+        auto term() -> Expression;
+        auto factor() -> Expression;
+        auto unary() -> Expression;
+        auto call() -> Expression;
+        auto primary() -> Expression;
 
-        inline auto block() -> std::vector<std::unique_ptr<Statement>>;
-        inline auto finishCall(std::unique_ptr<Expression> callee)
-            -> std::unique_ptr<Expression>;
+        inline auto block() -> std::vector<Statement>;
+        inline auto finishCall(Expression callee) -> Expression;
 
         auto match(const std::vector<TokenType>& tokenTypes) -> bool;
         auto check(TokenType tokenType) -> bool;
@@ -55,8 +54,7 @@ namespace sail
         auto peek() -> Token&;
 
         auto consume(TokenType tokenType) -> Token*;
-        inline auto consume(TokenType tokenType, const std::string& message)
-            -> Token&;
+        inline auto consume(TokenType tokenType, const std::string& message) -> Token&;
 
         void synchronize();
 

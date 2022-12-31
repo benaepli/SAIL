@@ -57,14 +57,14 @@ namespace sail
                 break;
             }
 
-            try
-            {
-                run(source);
-            }
-            catch (const std::exception& e)
-            {
-                std::cout << e.what() << std::endl;
-            }
+            // try
+            // {
+            run(source);
+            // }
+            // catch (const std::exception& e)
+            // {
+            //     std::cout << e.what() << std::endl;
+            // }
         }
     }
 
@@ -75,7 +75,7 @@ namespace sail
         scanner.scanTokens();
 
         Parser parser {tokens};
-        std::vector<std::unique_ptr<Statement>> statements = parser.parse();
+        std::vector<Statement> statements = parser.parse();
 
         Resolver resolver {*_interpreter};
         resolver.resolve(statements);

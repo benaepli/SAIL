@@ -10,6 +10,7 @@
 #include "Expressions/VariableExpression.h"
 #include "Statements/Statements.h"
 #include "Token/Token.h"
+#include "Types/NullType.h"
 #include "Types/Types.h"
 #include "fmt/format.h"
 
@@ -21,25 +22,25 @@ namespace sail
     {
     }
 
-    auto Parser::parse() -> std::vector<std::unique_ptr<Statement>>
+    auto Parser::parse() -> std::vector<Statement>
     {
-        std::vector<std::unique_ptr<Statement>> statements {};
+        std::vector<Statement> statements {};
 
         while (!isAtEnd())
         {
-            std::unique_ptr<Statement> newStatement = statement();
-            statements.push_back(std::move(newStatement));
+            Statement newStatement = statement();
+            statements.push_back(newStatement);
         }
 
         return statements;
     }
 
-    auto Parser::statement() -> std::unique_ptr<Statement>
+    auto Parser::statement() -> Statement
     {
         return declaration();
     }
 
-    auto Parser::declaration() -> std::unique_ptr<Statement>
+    auto Parser::declaration() -> Statement
     {
         if (match({TokenType::eClass}))
         {
@@ -84,73 +85,66 @@ namespace sail
         return expressionStatement();
     };
 
-    auto Parser::classDeclaration() -> std::unique_ptr<Statement>
+    auto Parser::classDeclaration() -> Statement
     {
         Token name = consume(TokenType::eIdentifier, "Expect class name.");
         consume(TokenType::eLeftBrace, "Expect '{' before class body.");
 
-        std::vector<std::unique_ptr<Statement>> methods {};
+        std::vector<std::shared_ptr<Statements::Function>> methods {};
         while (!check(TokenType::eRightBrace) && !isAtEnd())
         {
-            methods.push_back(std::move(functionStatement()));
+            methods.push_back(functionStatement());
         }
 
         consume(TokenType::eRightBrace, "Expect '}' after class body.");
-        return std::make_unique<Statement>(
-            Statements::Class {name, std::move(methods)});
+        return std::make_shared<Statements::Class>(name, methods);
     }
 
-    auto Parser::varDeclaration() -> std::unique_ptr<Statement>
+    auto Parser::varDeclaration() -> Statement
     {
-        Token& name =
-            consume(TokenType::eIdentifier, "Expected identifier after 'let'");
+        Token& name = consume(TokenType::eIdentifier, "Expected identifier after 'let'");
 
-        std::unique_ptr<Expression> initializer {};
+        Expression initializer {};
         if (match({TokenType::eEqual}))
         {
-            initializer = std::move(expression());
+            initializer = expression();
         }
 
         Token& semicolon =
-            consume(TokenType::eSemicolon,
-                    "Expected semicolon after variable declaration");
+            consume(TokenType::eSemicolon, "Expected semicolon after variable declaration");
 
-        return std::make_unique<Statement>(
-            Statements::Variable {name, std::move(initializer)});
+        return std::make_shared<Statements::Variable>(name, initializer);
     }
 
-    auto Parser::blockStatement() -> std::unique_ptr<Statement>
+    auto Parser::blockStatement() -> Statement
     {
-        std::vector<std::unique_ptr<Statement>> statements = block();
-        return std::make_unique<Statement>(
-            Statements::Block {std::move(statements)});
+        std::vector<Statement> statements = block();
+        return std::make_shared<Statements::Block>(statements);
     }
 
-    auto Parser::block() -> std::vector<std::unique_ptr<Statement>>
+    auto Parser::block() -> std::vector<Statement>
     {
-        std::vector<std::unique_ptr<Statement>> statements {};
+        std::vector<Statement> statements {};
 
         while (!check(TokenType::eRightBrace) && !isAtEnd())
         {
-            statements.push_back(std::move(statement()));
+            statements.push_back(declaration());
         }
 
         consume(TokenType::eRightBrace, "Expected '}' after block");
         return statements;
     }
 
-    auto Parser::expressionStatement() -> std::unique_ptr<Statement>
+    auto Parser::expressionStatement() -> Statement
     {
-        std::unique_ptr<Expression> newExpression = expression();
+        Expression newExpression = expression();
         consume(TokenType::eSemicolon, "Expected semicolon after value");
-        return std::make_unique<Statement>(
-            Statements::Expression {std::move(newExpression)});
+        return std::make_shared<Statements::Expression>(newExpression);
     }
 
-    auto Parser::functionStatement() -> std::unique_ptr<Statement>
+    auto Parser::functionStatement() -> std::shared_ptr<Statements::Function>
     {
-        Token& name =
-            consume(TokenType::eIdentifier, "Expected identifier after 'fun'");
+        Token& name = consume(TokenType::eIdentifier, "Expected identifier after 'fun'");
         consume(TokenType::eLeftParen, "Expected '(' after function name");
         std::vector<Token> parameters {};
         if (!check(TokenType::eRightParen))
@@ -159,72 +153,64 @@ namespace sail
             {
                 if (parameters.size() >= 255)
                 {
-                    throw ParserError(peek(),
-                                      "Cannot have more than 255 parameters");
+                    throw ParserError(peek(), "Cannot have more than 255 parameters");
                 }
-                parameters.push_back(
-                    consume(TokenType::eIdentifier, "Expected parameter name"));
+                parameters.push_back(consume(TokenType::eIdentifier, "Expected parameter name"));
             } while (match({TokenType::eComma}));
         }
         consume(TokenType::eRightParen, "Expected ')' after parameters");
         consume(TokenType::eLeftBrace, "Expected '{' before function body");
-        std::vector<std::unique_ptr<Statement>> body = block();
-        return std::make_unique<Statement>(Statements::Function {
-            name, std::move(parameters), std::move(body)});
+        std::vector<Statement> body = block();
+        return std::make_shared<Statements::Function>(name, parameters, body);
     }
 
-    auto Parser::returnStatement() -> std::unique_ptr<Statement>
+    auto Parser::returnStatement() -> Statement
     {
         Token& keyword = previous();
-        std::unique_ptr<Expression> value {};
+        Expression value {};
         if (!check(TokenType::eSemicolon))
         {
             value = expression();
         }
 
         consume(TokenType::eSemicolon, "Expected semicolon after return value");
-        return std::make_unique<Statement>(
-            Statements::Return {std::move(value), keyword});
+        return std::make_shared<Statements::Return>(value, keyword);
     }
 
-    auto Parser::ifStatement() -> std::unique_ptr<Statement>
+    auto Parser::ifStatement() -> Statement
     {
         consume(TokenType::eLeftParen, "Expected '(' after 'if'");
-        std::unique_ptr<Expression> condition = expression();
+        Expression condition = expression();
         consume(TokenType::eRightParen, "Expected ')' after if condition");
 
-        std::unique_ptr<Statement> thenBranch = statement();
-        std::unique_ptr<Statement> elseBranch {};
+        Statement thenBranch = statement();
+        Statement elseBranch {};
         if (match({TokenType::eElse}))
         {
             elseBranch = statement();
         }
 
-        return std::make_unique<Statement>(
-            Statements::If {std::move(condition),
-                            std::move(thenBranch),
-                            std::move(elseBranch)});
+        return std::make_shared<Statements::If>(condition, thenBranch, elseBranch);
     }
 
-    auto Parser::whileStatement() -> std::unique_ptr<Statement>
+    auto Parser::whileStatement() -> Statement
     {
-        consume(TokenType::eLeftParen, "Expected '(' after 'if'");
-        std::unique_ptr<Expression> condition = expression();
-        consume(TokenType::eLeftParen, "Expected ')' after while condition");
-        std::unique_ptr<Statement> body = statement();
+        consume(TokenType::eLeftParen, "Expected '(' after 'while'");
+        Expression condition = expression();
+        consume(TokenType::eRightParen, "Expected ')' after while condition");
+        Statement body = statement();
 
-        return std::make_unique<Statement>(
-            Statements::While {std::move(condition), std::move(body)});
+        return std::make_shared<Statements::While>(condition, body);
     }
 
-    auto Parser::forStatement() -> std::unique_ptr<Statement>
+    auto Parser::forStatement() -> Statement
     {
         consume(TokenType::eLeftParen, "Expected '(' after 'for'");
 
-        std::unique_ptr<Statement> initializer {};
+        Statement initializer = std::shared_ptr<Statements::Block> {nullptr};
         if (match({TokenType::eSemicolon}))
         {
-            initializer = nullptr;
+            initializer = {};
         }
         else if (match({TokenType::eLet}))
         {
@@ -235,77 +221,71 @@ namespace sail
             initializer = expressionStatement();
         }
 
-        std::unique_ptr<Expression> condition {};
+        Expression condition {};
         if (!check(TokenType::eSemicolon))
         {
             condition = expression();
         }
         consume(TokenType::eSemicolon, "Expected ';' after loop condition");
 
-        std::unique_ptr<Expression> increment {};
+        Expression increment {};
         if (!check(TokenType::eRightParen))
         {
             increment = expression();
         }
         consume(TokenType::eRightParen, "Expected ')' after for clauses");
 
-        std::unique_ptr<Statement> body = statement();
+        Statement body = statement();
 
-        if (increment != nullptr)
+        if (!expressionIsNullptr(increment))
         {
-            std::vector<std::unique_ptr<Statement>> statements {};
-            statements.push_back(std::move(body));
-            statements.push_back(std::make_unique<Statement>(
-                Statements::Expression {std::move(increment)}));
-            body = std::make_unique<Statement>(
-                Statements::Block {std::move(statements)});
+            std::vector<Statement> statements {};
+            statements.push_back(body);
+            statements.emplace_back(std::make_shared<Statements::Expression>(increment));
+            body = std::make_shared<Statements::Block>(statements);
         }
 
-        if (condition == nullptr)
+        if (expressionIsNullptr(condition))
         {
-            condition = std::make_unique<Expression>(
-                Expressions::Literal {LiteralType {true}});
+            condition = std::make_shared<Expressions::Literal>(LiteralType {true});
         }
 
-        body = std::make_unique<Statement>(
-            Statements::While {std::move(condition), std::move(body)});
+        body = std::make_shared<Statements::While>(condition, body);
 
-        if (initializer != nullptr)
+        if (!statementIsNullptr(initializer))
         {
-            std::vector<std::unique_ptr<Statement>> statements {};
-            statements.push_back(std::move(initializer));
-            statements.push_back(std::move(body));
-            body = std::make_unique<Statement>(
-                Statements::Block {std::move(statements)});
+            std::vector<Statement> statements {};
+            statements.push_back(initializer);
+            statements.push_back(body);
+            body = std::make_shared<Statements::Block>(statements);
         }
 
         return body;
     }
 
-    auto Parser::expression() -> std::unique_ptr<Expression>
+    auto Parser::expression() -> Expression
     {
         return assignment();
     }
 
-    auto Parser::assignment() -> std::unique_ptr<Expression>
+    auto Parser::assignment() -> Expression
     {
-        std::unique_ptr<Expression> expr = orExpression();
+        Expression expr = orExpression();
 
         if (match({TokenType::eEqual}))
         {
             Token equals = previous();
-            std::unique_ptr<Expression> value = assignment();
+            Expression value = assignment();
 
-            if (auto* variable = std::get_if<Expressions::Variable>(&*expr))
+            if (auto* variable = std::get_if<std::shared_ptr<Expressions::Variable>>(&expr))
             {
-                Token& name = variable->name;
-                return std::make_unique<Expression>(
-                    Expressions::Assignment {std::move(value), name});
+                Token& name = variable->get()->name;
+                return std::make_shared<Expressions::Assignment>(value, name);
             }
-            if (auto* get = std::get_if<Expressions::Get>(&*expr))
+            if (auto* get = std::get_if<std::shared_ptr<Expressions::Get>>(&expr))
             {
-                return std::make_unique<Expression>(Expressions::Set {
-                    std::move(get->object), get->name, std::move(value)});
+                auto expr = *get;
+                return std::make_shared<Expressions::Set>(expr->object, expr->name, value);
             }
             throw ParserError(equals, "Invalid assignment target");
         }
@@ -313,54 +293,51 @@ namespace sail
         return expr;
     }
 
-    auto Parser::orExpression() -> std::unique_ptr<Expression>
+    auto Parser::orExpression() -> Expression
     {
-        std::unique_ptr<Expression> expr = andExpression();
+        Expression expr = andExpression();
 
         while (match({TokenType::eOr}))
         {
             Token oper = previous();
-            std::unique_ptr<Expression> right = andExpression();
-            expr = std::make_unique<Expression>(
-                Expressions::Logical {std::move(expr), std::move(right), oper});
+            Expression right = andExpression();
+            expr = std::make_shared<Expressions::Logical>(expr, right, oper);
         }
 
         return expr;
     }
 
-    auto Parser::andExpression() -> std::unique_ptr<Expression>
+    auto Parser::andExpression() -> Expression
     {
-        std::unique_ptr<Expression> expr = equality();
+        Expression expr = equality();
 
         while (match({TokenType::eAnd}))
         {
             Token oper = previous();
-            std::unique_ptr<Expression> right = equality();
-            expr = std::make_unique<Expression>(
-                Expressions::Logical {std::move(expr), std::move(right), oper});
+            Expression right = equality();
+            expr = std::make_shared<Expressions::Logical>(expr, right, oper);
         }
 
         return expr;
     }
 
-    auto Parser::equality() -> std::unique_ptr<Expression>
+    auto Parser::equality() -> Expression
     {
-        std::unique_ptr<Expression> expr = comparison();
+        Expression expr = comparison();
 
         while (match({TokenType::eBangEqual, TokenType::eEqualEqual}))
         {
             Token oper = previous();
-            std::unique_ptr<Expression> right = comparison();
-            expr = std::make_unique<Expression>(
-                Expressions::Binary {std::move(expr), std::move(right), oper});
+            Expression right = comparison();
+            expr = std::make_shared<Expressions::Binary>(expr, right, oper);
         }
 
         return expr;
     }
 
-    auto Parser::comparison() -> std::unique_ptr<Expression>
+    auto Parser::comparison() -> Expression
     {
-        std::unique_ptr<Expression> expr = term();
+        Expression expr = term();
 
         while (match({TokenType::eGreater,
                       TokenType::eGreaterEqual,
@@ -368,73 +345,67 @@ namespace sail
                       TokenType::eLessEqual}))
         {
             Token oper = previous();
-            std::unique_ptr<Expression> right = term();
-            expr = std::make_unique<Expression>(
-                Expressions::Binary {std::move(expr), std::move(right), oper});
+            Expression right = term();
+            expr = std::make_shared<Expressions::Binary>(expr, right, oper);
         }
 
         return expr;
     }
 
-    auto Parser::term() -> std::unique_ptr<Expression>
+    auto Parser::term() -> Expression
     {
-        std::unique_ptr<Expression> expr = factor();
+        Expression expr = factor();
 
         while (match({TokenType::eMinus, TokenType::ePlus}))
         {
             Token oper = previous();
-            std::unique_ptr<Expression> right = factor();
-            expr = std::make_unique<Expression>(
-                Expressions::Binary {std::move(expr), std::move(right), oper});
+            Expression right = factor();
+            expr = std::make_shared<Expressions::Binary>(expr, right, oper);
         }
 
         return expr;
     }
 
-    auto Parser::factor() -> std::unique_ptr<Expression>
+    auto Parser::factor() -> Expression
     {
-        std::unique_ptr<Expression> expr = unary();
+        Expression expr = unary();
 
         while (match({TokenType::eSlash, TokenType::eStar}))
         {
             Token oper = previous();
-            std::unique_ptr<Expression> right = unary();
-            expr = std::make_unique<Expression>(
-                Expressions::Binary {std::move(expr), std::move(right), oper});
+            Expression right = unary();
+            expr = std::make_shared<Expressions::Binary>(expr, right, oper);
         }
 
         return expr;
     }
 
-    auto Parser::unary() -> std::unique_ptr<Expression>
+    auto Parser::unary() -> Expression
     {
         if (match({TokenType::eBang, TokenType::eMinus}))
         {
             Token oper = previous();
-            std::unique_ptr<Expression> right = unary();
-            return std::make_unique<Expression>(
-                Expressions::Unary {std::move(right), oper});
+            Expression right = unary();
+            return std::make_shared<Expressions::Unary>(right, oper);
         }
 
         return call();
     }
 
-    auto Parser::call() -> std::unique_ptr<Expression>
+    auto Parser::call() -> Expression
     {
-        std::unique_ptr<Expression> expr = primary();
+        Expression expr = primary();
 
         while (true)
         {
             if (match({TokenType::eLeftParen}))
             {
-                expr = finishCall(std::move(expr));
+                expr = finishCall(expr);
             }
             else if (match({TokenType::eDot}))
             {
-                Token name = consume(TokenType::eIdentifier,
-                                     "Expect property name after '.'.");
-                expr = std::make_unique<Expression>(
-                    Expressions::Get {std::move(expr), name});
+                Token name = consume(TokenType::eIdentifier, "Expect property name after '.'.");
+                expr = std::make_shared<Expressions::Get>(expr, name);
             }
             else
             {
@@ -445,67 +416,59 @@ namespace sail
         return expr;
     }
 
-    auto Parser::finishCall(std::unique_ptr<Expression> callee)
-        -> std::unique_ptr<Expression>
+    auto Parser::finishCall(Expression callee) -> Expression
     {
-        std::vector<std::unique_ptr<Expression>> arguments {};
+        std::vector<Expression> arguments {};
         if (!check(TokenType::eRightParen))
         {
             do
             {
                 if (arguments.size() >= 255)
                 {
-                    throw ParserError(peek(),
-                                      "Can't have more than 255 arguments");
+                    throw ParserError(peek(), "Can't have more than 255 arguments");
                 }
                 arguments.push_back(expression());
             } while (match({TokenType::eComma}));
         }
-        Token paren =
-            consume(TokenType::eRightParen, "Expect ')' after arguments");
-        return std::make_unique<Expression>(
-            Expressions::Call {std::move(callee), std::move(arguments), paren});
+        Token paren = consume(TokenType::eRightParen, "Expect ')' after arguments");
+        return std::make_shared<Expressions::Call>(callee, arguments, paren);
     }
 
-    auto Parser::primary() -> std::unique_ptr<Expression>
+    auto Parser::primary() -> Expression
     {
         if (match({TokenType::eFalse}))
         {
-            return std::make_unique<Expression>(Expressions::Literal {false});
+            return std::make_shared<Expressions::Literal>(false);
         }
         if (match({TokenType::eTrue}))
         {
-            return std::make_unique<Expression>(Expressions::Literal {true});
+            return std::make_shared<Expressions::Literal>(true);
         }
         if (match({TokenType::eNull}))
         {
-            return std::make_unique<Expression>(
-                Expressions::Literal {Types::Null {}});
+            return std::make_shared<Expressions::Literal>(Types::Null {});
         }
 
         if (match({TokenType::eNumber, TokenType::eString}))
         {
-            return std::make_unique<Expression>(
-                Expressions::Literal {previous().literal});
+            return std::make_shared<Expressions::Literal>(previous().literal);
         }
 
         if (match({TokenType::eThis}))
         {
-            return std::make_unique<Expression>(Expressions::This {previous()});
+            return std::make_shared<Expressions::This>(previous());
         }
 
         if (match({TokenType::eIdentifier}))
         {
-            return std::make_unique<Expression>(
-                Expressions::Variable {previous()});
+            return std::make_shared<Expressions::Variable>(previous());
         }
 
         if (match({TokenType::eLeftParen}))
         {
-            std::unique_ptr<Expression> expr = expression();
+            Expression expr = expression();
             consume(TokenType::eRightParen, "Expected ')' after expression");
-            return std::make_unique<Expression>(
-                Expressions::Grouping {std::move(expr)});
+            return std::make_shared<Expressions::Grouping>(expr);
         }
         throw ParserError(peek(), "Expected expression");
     }
@@ -567,8 +530,7 @@ namespace sail
         return nullptr;
     }
 
-    auto Parser::consume(TokenType tokenType, const std::string& message)
-        -> Token&
+    auto Parser::consume(TokenType tokenType, const std::string& message) -> Token&
     {
         if (check(tokenType))
         {

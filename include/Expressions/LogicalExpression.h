@@ -7,8 +7,8 @@ namespace sail::Expressions
 {
     struct Logical
     {
-        std::unique_ptr<Expression> left;
-        std::unique_ptr<Expression> right;
+        Expression left;
+        Expression right;
         Token oper;
 
         auto operator==(const Logical& other) const -> bool;

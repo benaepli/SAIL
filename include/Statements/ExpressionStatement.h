@@ -9,6 +9,6 @@ namespace sail::Statements
 {
     struct Expression
     {
-        std::unique_ptr<sail::Expression> expression;
+        sail::Expression expression;
     };
 }  // namespace sail::Statements

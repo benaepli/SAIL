@@ -9,8 +9,8 @@ namespace sail::Statements
 {
     struct While
     {
-        std::unique_ptr<sail::Expression> condition;
-        std::unique_ptr<Statement> body;
+        sail::Expression condition;
+        Statement body;
     };
 
 }  // namespace sail::Statements

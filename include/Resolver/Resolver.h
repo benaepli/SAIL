@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "Expressions/Expression.h"
 #include "Statements/Statements.h"
 #include "ankerl/unordered_dense.h"
 
@@ -30,44 +31,41 @@ namespace sail
       public:
         explicit Resolver(Interpreter& interpreter);
 
-        void resolve(std::vector<std::unique_ptr<Statement>>& statements);
+        void resolve(std::vector<Statement>& statements);
         void resolve(Statement& statement);
         void resolve(Expression& expression);
 
       private:
-        void blockStatement(Statements::Block& block);
-        void classStatement(Statements::Class& classStatement);
-        void expressionStatement(Statements::Expression& expression);
-        void functionStatement(Statements::Function& function);
-        void ifStatement(Statements::If& ifStatement);
-        void returnStatement(Statements::Return& returnStatement);
-        void variableStatement(Statements::Variable& variable);
-        void whileStatement(Statements::While& whileStatement);
+        void blockStatement(std::shared_ptr<Statements::Block>& block);
+        void classStatement(std::shared_ptr<Statements::Class>& classStatement);
+        void expressionStatement(std::shared_ptr<Statements::Expression>& expression);
+        void functionStatement(std::shared_ptr<Statements::Function>& function);
+        void ifStatement(std::shared_ptr<Statements::If>& ifStatement);
+        void returnStatement(std::shared_ptr<Statements::Return>& returnStatement);
+        void variableStatement(std::shared_ptr<Statements::Variable>& variable);
+        void whileStatement(std::shared_ptr<Statements::While>& whileStatement);
 
-        void assignmentExpression(Expressions::Assignment& assignment,
-                                  Expression& expression);
-        void binaryExpression(Expressions::Binary& binary);
-        void callExpression(Expressions::Call& call);
-        void getExpression(Expressions::Get& get);
-        void groupingExpression(Expressions::Grouping& grouping);
-        void literalExpression(Expressions::Literal& literal);
-        void logicalExpression(Expressions::Logical& logical);
-        void setExpression(Expressions::Set& set);
-        void thisExpression(Expressions::This& thisExpression,
-                            Expression& expression);
-        void unaryExpression(Expressions::Unary& unary);
-        void variableExpression(Expressions::Variable& variable,
-                                Expression& expression);
+        void assignmentExpression(std::shared_ptr<Expressions::Assignment>& assignment);
+        void binaryExpression(std::shared_ptr<Expressions::Binary>& binary);
+        void callExpression(std::shared_ptr<Expressions::Call>& call);
+        void getExpression(std::shared_ptr<Expressions::Get>& get);
+        void groupingExpression(std::shared_ptr<Expressions::Grouping>& grouping);
+        void literalExpression(std::shared_ptr<Expressions::Literal>& literal);
+        void logicalExpression(std::shared_ptr<Expressions::Logical>& logical);
+        void setExpression(std::shared_ptr<Expressions::Set>& set);
+        void thisExpression(std::shared_ptr<Expressions::This>& thisExpr);
+        void unaryExpression(std::shared_ptr<Expressions::Unary>& unary);
+        void variableExpression(std::shared_ptr<Expressions::Variable>& variable);
 
         void beginScope();
         void endScope();
         void declare(const Token& name);
         void define(const Token& name);
-        void resolveFunction(Statements::Function& function, FunctionType type);
+        void resolveFunction(std::shared_ptr<Statements::Function>& function, FunctionType type);
         void resolveLocal(Expression& expression, const Token& name);
 
         Interpreter& _interpreter;
-        std::stack<ankerl::unordered_dense::map<std::string, bool>> _scopes;
+        std::vector<ankerl::unordered_dense::map<std::string, bool>> _scopes;
         ClassType _currentClass = ClassType::eNone;
         FunctionType _currentFunction = FunctionType::eNone;
     };

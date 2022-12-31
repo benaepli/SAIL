@@ -9,8 +9,8 @@ namespace sail::Statements
 {
     struct If
     {
-        std::unique_ptr<sail::Expression> condition;
-        std::unique_ptr<Statement> thenBranch;
-        std::unique_ptr<Statement> elseBranch;
+        sail::Expression condition;
+        Statement thenBranch;
+        Statement elseBranch;
     };
 }  // namespace sail::Statements

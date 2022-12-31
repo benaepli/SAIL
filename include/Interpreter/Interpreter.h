@@ -29,9 +29,9 @@ namespace sail
         Interpreter();
 
         void execute(Statement& statement);
-        void interpret(std::vector<std::unique_ptr<Statement>>& statements);
+        void interpret(std::vector<Statement>& statements);
 
-        void executeBlock(std::vector<std::unique_ptr<Statement>>& statements,
+        void executeBlock(std::vector<Statement>& statements,
                           std::shared_ptr<Environment> environment);
 
         void resolve(Expression& expression, size_t depth);
@@ -40,35 +40,32 @@ namespace sail
         auto evaluate(Expression& expression) -> Value;
 
         // Statement execution
-        auto blockStatement(Statements::Block& statement) -> void;
-        auto classStatement(Statements::Class& statement) -> void;
-        auto expressionStatement(Statements::Expression& statement) -> void;
-        auto functionStatement(Statements::Function& statement) -> void;
-        auto ifStatement(Statements::If& statement) -> void;
-        auto returnStatement(Statements::Return& statement) -> void;
-        auto variableStatement(Statements::Variable& statement) -> void;
-        auto whileStatement(Statements::While& statement) -> void;
+        auto blockStatement(std::shared_ptr<Statements::Block>& statement) -> void;
+        auto classStatement(std::shared_ptr<Statements::Class>& statement) -> void;
+        auto expressionStatement(std::shared_ptr<Statements::Expression>& statement) -> void;
+        auto functionStatement(std::shared_ptr<Statements::Function>& statement) -> void;
+        auto ifStatement(std::shared_ptr<Statements::If>& statement) -> void;
+        auto returnStatement(std::shared_ptr<Statements::Return>& statement) -> void;
+        auto variableStatement(std::shared_ptr<Statements::Variable>& statement) -> void;
+        auto whileStatement(std::shared_ptr<Statements::While>& statement) -> void;
 
         // Expression evaluation
-        auto assignmentExpression(Expressions::Assignment& assignment,
-                                  Expression& expression) -> Value;
-        auto callExpression(Expressions::Call& expression) -> Value;
-        auto getExpression(Expressions::Get& expression) -> Value;
-        auto setExpression(Expressions::Set& expression) -> Value;
-        auto literalExpression(Expressions::Literal& expression) -> Value;
-        auto logicalExpression(Expressions::Logical& expression) -> Value;
-        auto groupingExpression(Expressions::Grouping& expression) -> Value;
-        auto unaryExpression(Expressions::Unary& expression) -> Value;
-        auto binaryExpression(Expressions::Binary& expression) -> Value;
-        auto variableExpression(Expressions::Variable& variable,
-                                Expression& expression) -> Value;
-        auto thisExpression(Expressions::This& thisExpr, Expression& expression)
-            -> Value;
+        auto assignmentExpression(std::shared_ptr<Expressions::Assignment>& assignment) -> Value;
+        auto callExpression(std::shared_ptr<Expressions::Call>& call) -> Value;
+        auto getExpression(std::shared_ptr<Expressions::Get>& get) -> Value;
+        auto setExpression(std::shared_ptr<Expressions::Set>& set) -> Value;
+        auto literalExpression(std::shared_ptr<Expressions::Literal>& literal) -> Value;
+        auto logicalExpression(std::shared_ptr<Expressions::Logical>& logical) -> Value;
+        auto groupingExpression(std::shared_ptr<Expressions::Grouping>& grouping) -> Value;
+        auto unaryExpression(std::shared_ptr<Expressions::Unary>& unary) -> Value;
+        auto binaryExpression(std::shared_ptr<Expressions::Binary>& binary) -> Value;
+        auto variableExpression(std::shared_ptr<Expressions::Variable>& variable) -> Value;
+        auto thisExpression(std::shared_ptr<Expressions::This>& thisExpr) -> Value;
 
         auto lookupVariable(Token& name, Expression& expression) -> Value;
 
         std::shared_ptr<Environment> _globalEnvironment;
         std::shared_ptr<Environment> _environment;
-        ankerl::unordered_dense::map<Expression, size_t> _locals;
+        std::unordered_map<Expression, size_t> _locals;
     };
 }  // namespace sail

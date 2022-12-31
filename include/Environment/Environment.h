@@ -12,6 +12,7 @@ namespace sail
         Environment() = default;
         explicit Environment(std::shared_ptr<Environment> enclosing);
 
+        auto get(const std::string& name) -> Value&;
         auto get(const Token& name) -> Value&;
         auto getAt(size_t distance, const std::string& name) -> Value&;
         auto getAt(size_t distance, const Token& name) -> Value&;

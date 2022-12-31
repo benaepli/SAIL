@@ -11,6 +11,6 @@ namespace sail::Statements
     {
         Token name;
         std::vector<Token> parameters;
-        std::vector<std::unique_ptr<Statement>> body;
+        std::vector<Statement> body;
     };
 }  // namespace sail::Statements

@@ -11,13 +11,26 @@
 #include "ThisExpression.h"
 #include "UnaryExpression.h"
 #include "VariableExpression.h"
+#include "utils/Overload.h"
 #include "utils/hash.h"
 
-namespace std
+SAIL_HASH_DECLARATION(sail::Expressions::Assignment)
+SAIL_HASH_DECLARATION(sail::Expressions::Binary)
+SAIL_HASH_DECLARATION(sail::Expressions::Call)
+SAIL_HASH_DECLARATION(sail::Expressions::Get)
+SAIL_HASH_DECLARATION(sail::Expressions::Grouping)
+SAIL_HASH_DECLARATION(sail::Expressions::Literal)
+SAIL_HASH_DECLARATION(sail::Expressions::Logical)
+SAIL_HASH_DECLARATION(sail::Expressions::Set)
+SAIL_HASH_DECLARATION(sail::Expressions::This)
+SAIL_HASH_DECLARATION(sail::Expressions::Unary)
+SAIL_HASH_DECLARATION(sail::Expressions::Variable)
+SAIL_HASH_DECLARATION(sail::Expression)
+
+namespace sail
 {
-    template<>
-    struct hash<sail ::Expression>
+    inline auto expressionIsNullptr(const Expression& expression) -> bool
     {
-        auto operator()(const sail ::Expression& val) const -> size_t;
-    };
-}  // namespace std
+        return std::visit([](auto& expression) { return expression == nullptr; }, expression);
+    }
+}  // namespace sail

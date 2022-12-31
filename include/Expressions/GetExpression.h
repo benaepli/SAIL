@@ -6,7 +6,7 @@ namespace sail::Expressions
 {
     struct Get
     {
-        std::unique_ptr<Expression> object;
+        Expression object;
         Token name;
 
         auto operator==(const Get& other) const -> bool;

@@ -21,15 +21,15 @@ namespace sail
         struct Variable;
     }  // namespace Expressions
 
-    using Expression = std::variant<Expressions::Assignment,
-                                    Expressions::Binary,
-                                    Expressions::Call,
-                                    Expressions::Get,
-                                    Expressions::Grouping,
-                                    Expressions::Literal,
-                                    Expressions::Logical,
-                                    Expressions::Set,
-                                    Expressions::This,
-                                    Expressions::Unary,
-                                    Expressions::Variable>;
+    using Expression = std::variant<std::shared_ptr<Expressions::Assignment>,
+                                    std::shared_ptr<Expressions::Binary>,
+                                    std::shared_ptr<Expressions::Call>,
+                                    std::shared_ptr<Expressions::Get>,
+                                    std::shared_ptr<Expressions::Grouping>,
+                                    std::shared_ptr<Expressions::Literal>,
+                                    std::shared_ptr<Expressions::Logical>,
+                                    std::shared_ptr<Expressions::Set>,
+                                    std::shared_ptr<Expressions::This>,
+                                    std::shared_ptr<Expressions::Unary>,
+                                    std::shared_ptr<Expressions::Variable>>;
 }  // namespace sail

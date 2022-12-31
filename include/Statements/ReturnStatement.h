@@ -10,7 +10,7 @@ namespace sail::Statements
 {
     struct Return
     {
-        std::unique_ptr<sail::Expression> value;
+        sail::Expression value;
         Token keyword;
     };
 

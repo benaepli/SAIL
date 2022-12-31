@@ -12,6 +12,21 @@ namespace sail
     {
     }
 
+    auto Environment::get(const std::string& name) -> Value&
+    {
+        if (_values.contains(name))
+        {
+            return _values[name];
+        }
+
+        if (_enclosing != nullptr)
+        {
+            return _enclosing->get(name);
+        }
+
+        throw std::runtime_error(fmt::format("Attempted to get undefined variable '{}'", name));
+    }
+
     auto Environment::get(const Token& name) -> Value&
     {
         if (_values.contains(name.lexeme))
@@ -24,20 +39,18 @@ namespace sail
             return _enclosing->get(name);
         }
 
-        throw RuntimeError(
-            name,
-            fmt::format("Attempted to get undefined variable '{}'",
-                        name.lexeme));
+        throw RuntimeError(name,
+                           fmt::format("Attempted to get undefined variable '{}'", name.lexeme));
     }
 
     auto Environment::getAt(size_t distance, const std::string& name) -> Value&
     {
-        return ancestor(distance)->_values[name];
+        return ancestor(distance)->get(name);
     }
 
     auto Environment::getAt(size_t distance, const Token& name) -> Value&
     {
-        return ancestor(distance)->_values[name.lexeme];
+        return ancestor(distance)->get(name);
     }
 
     void Environment::define(const std::string& name, const Value& value)
@@ -64,23 +77,19 @@ namespace sail
             return;
         }
 
-        throw RuntimeError(
-            name,
-            fmt::format("Attempted to assign undefined variable '{}'",
-                        name.lexeme));
+        throw RuntimeError(name,
+                           fmt::format("Attempted to assign undefined variable '{}'", name.lexeme));
     }
 
-    void Environment::assignAt(size_t distance,
-                               const Token& name,
-                               const Value& value)
+    void Environment::assignAt(size_t distance, const Token& name, const Value& value)
     {
-        ancestor(distance)->_values[name.lexeme] = value;
+        ancestor(distance)->assign(name, value);
     }
 
     auto Environment::ancestor(size_t distance) -> Environment*
     {
         auto* environment = this;
-        for (auto i = 0; i < distance; ++i)
+        for (size_t i = 0; i < distance; i++)
         {
             environment = environment->_enclosing.get();
         }

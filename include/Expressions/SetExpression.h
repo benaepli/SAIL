@@ -6,9 +6,9 @@ namespace sail::Expressions
 {
     struct Set
     {
-        std::unique_ptr<Expression> object;
+        Expression object;
         Token name;
-        std::unique_ptr<Expression> value;
+        Expression value;
 
         auto operator==(const Set& other) const -> bool;
     };

@@ -7,7 +7,7 @@
 
 namespace sail::Types
 {
-    Function::Function(Statements::Function body,
+    Function::Function(std::shared_ptr<Statements::Function> body,
                        std::shared_ptr<Environment> closure)
         : _body(std::move(body))
         , _closure(std::move(closure))
@@ -15,8 +15,7 @@ namespace sail::Types
     {
     }
 
-    auto Function::call(Interpreter& interpreter, std::vector<Value>& arguments)
-        -> Value
+    auto Function::call(Interpreter& interpreter, std::vector<Value>& arguments) -> Value
     {
         auto& environment = _localEnvironment;
         environment->reset();
@@ -37,25 +36,24 @@ namespace sail::Types
 
     auto Function::arity() const -> size_t
     {
-        return _body.parameters.size();
+        return _body->parameters.size();
     }
 
     auto Function::name() const -> std::string const&
     {
-        return _body.name.lexeme;
+        return _body->name.lexeme;
     }
 
-    auto Function::process(Interpreter& interpreter,
-                           std::vector<Value>& arguments) -> Value
+    auto Function::process(Interpreter& interpreter, std::vector<Value>& arguments) -> Value
     {
-        for (int i = 0; i < _body.parameters.size(); i++)
+        for (size_t i = 0; i < _body->parameters.size(); i++)
         {
-            _localEnvironment->define(_body.parameters[i].lexeme, arguments[i]);
+            _localEnvironment->define(_body->parameters[i].lexeme, arguments[i]);
         }
 
         try
         {
-            interpreter.executeBlock(_body.body, _localEnvironment);
+            interpreter.executeBlock(_body->body, _localEnvironment);
         }
         catch (Return& returnValue)
         {

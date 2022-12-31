@@ -7,6 +7,6 @@ namespace sail::Statements
     struct Variable
     {
         Token name;
-        std::unique_ptr<sail::Expression> initializer;
+        sail::Expression initializer;
     };
 }  // namespace sail::Statements

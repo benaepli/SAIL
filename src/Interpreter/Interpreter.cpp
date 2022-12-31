@@ -13,6 +13,7 @@
 #include "Expressions/Expressions.h"
 #include "Expressions/VariableExpression.h"
 #include "Native/DefineNative.h"
+#include "Statements/Statement.h"
 #include "Statements/Statements.h"
 #include "Token/Token.h"
 #include "Types/CallableType.h"
@@ -31,10 +32,9 @@ namespace sail
         defineNativeFunctions(*_globalEnvironment);
     }
 
-    void Interpreter::interpret(
-        std::vector<std::unique_ptr<Statement>>& statements)
+    void Interpreter::interpret(std::vector<Statement>& statements)
     {
-        auto each = [&](auto& statement) -> void { execute(*statement); };
+        auto each = [&](auto& statement) -> void { execute(statement); };
         std::ranges::for_each(statements, each);
     }
 
@@ -42,21 +42,21 @@ namespace sail
     {
         std::visit(
             Overload {
-                [this](Statements::Block& statement) -> void
+                [this](std::shared_ptr<Statements::Block>& statement) -> void
                 { blockStatement(statement); },
-                [this](Statements::Class& statement) -> void
+                [this](std::shared_ptr<Statements::Class>& statement) -> void
                 { classStatement(statement); },
-                [this](Statements::Expression& statement) -> void
+                [this](std::shared_ptr<Statements::Expression>& statement) -> void
                 { expressionStatement(statement); },
-                [this](Statements::Function& statement) -> void
+                [this](std::shared_ptr<Statements::Function>& statement) -> void
                 { functionStatement(statement); },
-                [this](Statements::If& statement) -> void
+                [this](std::shared_ptr<Statements::If>& statement) -> void
                 { ifStatement(statement); },
-                [this](Statements::Return& statement) -> void
+                [this](std::shared_ptr<Statements::Return>& statement) -> void
                 { returnStatement(statement); },
-                [this](Statements::Variable& statement) -> void
+                [this](std::shared_ptr<Statements::Variable>& statement) -> void
                 { variableStatement(statement); },
-                [this](Statements::While& statement) -> void
+                [this](std::shared_ptr<Statements::While>& statement) -> void
                 { whileStatement(statement); },
             },
             statement);
@@ -66,47 +66,45 @@ namespace sail
     {
         return std::visit(
             Overload {
-                [this,
-                 &expression](Expressions::Assignment& assignment) -> Value
-                { return assignmentExpression(assignment, expression); },
-                [this](Expressions::Call& expression) -> Value
-                { return callExpression(expression); },
-                [this](Expressions::Get& expression) -> Value
-                { return getExpression(expression); },
-                [this](Expressions::Literal& expression) -> Value
-                { return literalExpression(expression); },
-                [this](Expressions::Logical& expression) -> Value
-                { return logicalExpression(expression); },
-                [this](Expressions::Set& expression) -> Value
-                { return setExpression(expression); },
-                [this](Expressions::Grouping& expression) -> Value
-                { return groupingExpression(expression); },
-                [this](Expressions::Unary& expression) -> Value
-                { return unaryExpression(expression); },
-                [this](Expressions::Binary& expression) -> Value
-                { return binaryExpression(expression); },
-                [this, &expression](Expressions::Variable& variable) -> Value
-                { return variableExpression(variable, expression); },
-                [this, &expression](Expressions::This& thisExpr) -> Value
-                { return thisExpression(thisExpr, expression); },
+                [this](std::shared_ptr<Expressions::Assignment>& assignment) -> Value
+                { return assignmentExpression(assignment); },
+                [this](std::shared_ptr<Expressions::Binary>& binary) -> Value
+                { return binaryExpression(binary); },
+                [this](std::shared_ptr<Expressions::Call>& call) -> Value
+                { return callExpression(call); },
+                [this](std::shared_ptr<Expressions::Get>& get) -> Value
+                { return getExpression(get); },
+                [this](std::shared_ptr<Expressions::Grouping>& grouping) -> Value
+                { return groupingExpression(grouping); },
+                [this](std::shared_ptr<Expressions::Literal>& literal) -> Value
+                { return literalExpression(literal); },
+                [this](std::shared_ptr<Expressions::Logical>& logical) -> Value
+                { return logicalExpression(logical); },
+                [this](std::shared_ptr<Expressions::Set>& set) -> Value
+                { return setExpression(set); },
+                [this](std::shared_ptr<Expressions::This>& this_) -> Value
+                { return thisExpression(this_); },
+                [this](std::shared_ptr<Expressions::Unary>& unary) -> Value
+                { return unaryExpression(unary); },
+                [this](std::shared_ptr<Expressions::Variable>& variable) -> Value
+                { return variableExpression(variable); },
+
             },
             expression);
     }
 
-    void Interpreter::blockStatement(Statements::Block& statement)
+    void Interpreter::blockStatement(std::shared_ptr<Statements::Block>& statement)
     {
-        executeBlock(statement.statements,
-                     std::make_shared<Environment>(_environment));
+        executeBlock(statement->statements, std::make_shared<Environment>(_environment));
     }
 
-    void Interpreter::executeBlock(
-        std::vector<std::unique_ptr<Statement>>& statements,
-        std::shared_ptr<Environment> environment)
+    void Interpreter::executeBlock(std::vector<Statement>& statements,
+                                   std::shared_ptr<Environment> environment)
     {
         std::shared_ptr<Environment> previousEnvironment = _environment;
         _environment = std::move(environment);
 
-        auto each = [&](auto& statement) -> void { execute(*statement); };
+        auto each = [&](auto& statement) -> void { execute(statement); };
         std::ranges::for_each(statements, each);
 
         _environment = previousEnvironment;
@@ -117,103 +115,95 @@ namespace sail
         _locals[expression] = depth;
     }
 
-    void Interpreter::classStatement(Statements::Class& statement)
+    void Interpreter::classStatement(std::shared_ptr<Statements::Class>& statement)
     {
-        _environment->define(statement.name.lexeme, Types::Null {});
+        _environment->define(statement->name.lexeme, Types::Null {});
 
-        ankerl::unordered_dense::map<std::string,
-                                     std::shared_ptr<Types::Function>>
-            methods;
-        for (std::unique_ptr<Statement>& method : statement.methods)
+        ankerl::unordered_dense::map<std::string, std::shared_ptr<Types::Function>> methods;
+        for (std::shared_ptr<Statements::Function>& method : statement->methods)
         {
-            auto& functionStatement = std::get<Statements::Function>(*method);
-            auto function = std::make_shared<Types::Function>(
-                std::move(functionStatement), _environment);
+            auto function = std::make_shared<Types::Function>(method, _environment);
             methods[function->name()] = function;
         }
 
-        auto klass = std::make_shared<Types::Class>(statement.name.lexeme,
-                                                    std::move(methods));
-        _environment->assign(statement.name, klass);
+        auto klass = std::make_shared<Types::Class>(statement->name.lexeme, methods);
+        _environment->assign(statement->name, klass);
     }
 
-    void Interpreter::expressionStatement(Statements::Expression& statement)
+    void Interpreter::expressionStatement(std::shared_ptr<Statements::Expression>& statement)
     {
-        evaluate(*statement.expression);
+        evaluate(statement->expression);
     }
 
-    void Interpreter::functionStatement(Statements::Function& statement)
+    void Interpreter::functionStatement(std::shared_ptr<Statements::Function>& statement)
     {
-        std::shared_ptr<Types::Function> function =
-            std::make_shared<Types::Function>(std::move(statement),
-                                              _environment);
+        auto function = std::make_shared<Types::Function>(statement, _environment);
         _environment->define(function->name(), function);
     }
 
-    void Interpreter::ifStatement(Statements::If& statement)
+    void Interpreter::ifStatement(std::shared_ptr<Statements::If>& statement)
     {
-        if (evaluate(*statement.condition).isTruthy())
+        if (evaluate(statement->condition).isTruthy())
         {
-            execute(*statement.thenBranch);
+            execute(statement->thenBranch);
         }
-        else if (statement.elseBranch != nullptr)
+        else if (!statementIsNullptr(statement->elseBranch))
         {
-            execute(*statement.elseBranch);
+            execute(statement->elseBranch);
         }
     }
 
-    void Interpreter::returnStatement(Statements::Return& statement)
+    void Interpreter::returnStatement(std::shared_ptr<Statements::Return>& statement)
     {
         Value value = Types::Null {};
 
-        if (statement.value != nullptr)
+        if (!expressionIsNullptr(statement->value))
         {
-            value = evaluate(*statement.value);
+            value = evaluate(statement->value);
         }
 
         throw Return {value};
     }
 
-    void Interpreter::variableStatement(Statements::Variable& statement)
+    void Interpreter::variableStatement(std::shared_ptr<Statements::Variable>& statement)
     {
         Value value = Types::Null {};
 
-        if (statement.initializer != nullptr)
+        if (!expressionIsNullptr(statement->initializer))
         {
-            value = evaluate(*statement.initializer);
+            value = evaluate(statement->initializer);
         }
 
-        _environment->define(statement.name, value);
+        _environment->define(statement->name, value);
     }
 
-    void Interpreter::whileStatement(Statements::While& statement)
+    void Interpreter::whileStatement(std::shared_ptr<Statements::While>& statement)
     {
-        while (evaluate(*statement.condition).isTruthy())
+        while (evaluate(statement->condition).isTruthy())
         {
-            execute(*statement.body);
+            execute(statement->body);
         }
     }
 
-    auto Interpreter::assignmentExpression(Expressions::Assignment& assignment,
-                                           Expression& expression) -> Value
+    auto Interpreter::assignmentExpression(std::shared_ptr<Expressions::Assignment>& assignment)
+        -> Value
     {
-        Value value = evaluate(*assignment.value);
+        Value value = evaluate(assignment->value);
 
-        if (_locals.contains(expression))
+        if (_locals.contains(assignment))
         {
-            size_t distance = _locals[expression];
-            _environment->assignAt(distance, assignment.name, value);
+            size_t distance = _locals[assignment];
+            _environment->assignAt(distance, assignment->name, value);
         }
         else
         {
-            _environment->assign(assignment.name, value);
+            _globalEnvironment->assign(assignment->name, value);
         }
 
         return value;
     }
 
-    auto Interpreter::literalExpression(Expressions::Literal& expression)
-        -> Value
+    auto Interpreter::literalExpression(std::shared_ptr<Expressions::Literal>& expression) -> Value
     {
         Value value {};
 
@@ -224,16 +214,15 @@ namespace sail
                 [&](const bool& val) { value = val; },
                 [&](const Types::Null&) { value = Types::Null {}; },
             },
-            expression.literal);
+            expression->literal);
 
         return value;
     }
 
-    auto Interpreter::logicalExpression(Expressions::Logical& expression)
-        -> Value
+    auto Interpreter::logicalExpression(std::shared_ptr<Expressions::Logical>& expression) -> Value
     {
-        Value left = evaluate(*expression.left);
-        if (expression.oper.type == TokenType::eOr)
+        Value left = evaluate(expression->left);
+        if (expression->oper.type == TokenType::eOr)
         {
             if (left.isTruthy())
             {
@@ -247,19 +236,19 @@ namespace sail
                 return left;
             }
         }
-        return evaluate(*expression.right);
+        return evaluate(expression->right);
     }
 
-    auto Interpreter::groupingExpression(Expressions::Grouping& expression)
+    auto Interpreter::groupingExpression(std::shared_ptr<Expressions::Grouping>& expression)
         -> Value
     {
-        return evaluate(*expression.expression);
+        return evaluate(expression->expression);
     }
 
-    auto Interpreter::unaryExpression(Expressions::Unary& expression) -> Value
+    auto Interpreter::unaryExpression(std::shared_ptr<Expressions::Unary>& expression) -> Value
     {
-        Value right = evaluate(*expression.right);
-        switch (expression.oper.type)
+        Value right = evaluate(expression->right);
+        switch (expression->oper.type)
         {
             case TokenType::eMinus:
             {
@@ -268,8 +257,7 @@ namespace sail
                 {
                     return -(*number);
                 }
-                throw RuntimeError(expression.oper,
-                                   "Cannot negate a non-number");
+                throw RuntimeError(expression->oper, "Cannot negate a non-number");
             }
             case TokenType::eBang:
                 return !right.isTruthy();
@@ -279,26 +267,25 @@ namespace sail
         return {};
     }
 
-    auto Interpreter::binaryExpression(Expressions::Binary& expression) -> Value
+    auto Interpreter::binaryExpression(std::shared_ptr<Expressions::Binary>& expression) -> Value
     {
-        Value left = evaluate(*expression.left);
-        Value right = evaluate(*expression.right);
+        Value left = evaluate(expression->left);
+        Value right = evaluate(expression->right);
 
-        if (expression.oper.type == TokenType::ePlus)
+        if (expression->oper.type == TokenType::ePlus)
         {
             if (left.isString() && right.isString())
             {
-                return std::get<std::string>(left)
-                    + std::get<std::string>(right);
+                return std::get<std::string>(left) + std::get<std::string>(right);
             }
         }
 
-        if (expression.oper.type == TokenType::eBangEqual)
+        if (expression->oper.type == TokenType::eBangEqual)
         {
             return left != right;
         }
 
-        if (expression.oper.type == TokenType::eEqualEqual)
+        if (expression->oper.type == TokenType::eEqualEqual)
         {
             return left == right;
         }
@@ -308,14 +295,13 @@ namespace sail
 
         if (!leftNumber.has_value() || !rightNumber.has_value())
         {
-            throw RuntimeError(expression.oper,
-                               "Cannot perform arithmetic on non-numbers");
+            throw RuntimeError(expression->oper, "Cannot perform arithmetic on non-numbers");
         }
 
         double leftValue = *leftNumber;
         double rightValue = *rightNumber;
 
-        switch (expression.oper.type)
+        switch (expression->oper.type)
         {
             case TokenType::eMinus:
                 return leftValue - rightValue;
@@ -336,80 +322,75 @@ namespace sail
             default:;
         }
 
-        throw RuntimeError(expression.oper, "Unknown operator");
+        throw RuntimeError(expression->oper, "Unknown operator");
     }
 
-    auto Interpreter::callExpression(Expressions::Call& expression) -> Value
+    auto Interpreter::callExpression(std::shared_ptr<Expressions::Call>& expression) -> Value
     {
-        Value callee = evaluate(*expression.callee);
+        Value callee = evaluate(expression->callee);
         std::vector<Value> arguments;
-        auto each = [&](auto& argument) -> void
-        { arguments.push_back(evaluate(*argument)); };
-        std::ranges::for_each(expression.arguments, each);
+        auto each = [&](auto& argument) -> void { arguments.push_back(evaluate(argument)); };
+        std::ranges::for_each(expression->arguments, each);
 
-        auto* callablePointer =
-            std::get_if<std::shared_ptr<Types::Callable>>(&callee);
+        auto* callablePointer = std::get_if<std::shared_ptr<Types::Callable>>(&callee);
         if (callablePointer != nullptr)
         {
             std::shared_ptr<Types::Callable> callable = *callablePointer;
             size_t arity = callable->arity();
-            if (arguments.size() != arity
-                && arity != std::numeric_limits<size_t>::max())
+            if (arguments.size() != arity && arity != std::numeric_limits<size_t>::max())
             {
                 throw RuntimeError(
-                    expression.paren,
-                    fmt::format("Expected {} arguments but got {}",
-                                callable->arity(),
-                                arguments.size()));
+                    expression->paren,
+                    fmt::format(
+                        "Expected {} arguments but got {}", callable->arity(), arguments.size()));
             }
             return callable->call(*this, arguments);
         }
 
-        throw RuntimeError(expression.paren, "Can only call functions");
+        throw RuntimeError(expression->paren, "Can only call functions and classes");
     }
 
-    auto Interpreter::variableExpression(Expressions::Variable& variable,
-                                         Expression& expression) -> Value
+    auto Interpreter::variableExpression(std::shared_ptr<Expressions::Variable>& variable) -> Value
     {
-        return lookupVariable(variable.name, expression);
+        Expression expression = variable;
+        return lookupVariable(variable->name, expression);
     }
 
-    auto Interpreter::getExpression(Expressions::Get& expression) -> Value
+    auto Interpreter::getExpression(std::shared_ptr<Expressions::Get>& expression) -> Value
     {
-        Value object = evaluate(*expression.object);
+        Value object = evaluate(expression->object);
         auto* instance = std::get_if<std::shared_ptr<Types::Instance>>(&object);
         if (instance != nullptr)
         {
-            return (*instance)->get(expression.name);
+            return (*instance)->get(expression->name);
         }
-        throw RuntimeError(expression.name, "Only instances have properties");
+        throw RuntimeError(expression->name, "Only instances have properties");
     }
 
-    auto Interpreter::setExpression(Expressions::Set& expression) -> Value
+    auto Interpreter::setExpression(std::shared_ptr<Expressions::Set>& expression) -> Value
     {
-        Value object = evaluate(*expression.object);
+        Value object = evaluate(expression->object);
         auto* instance = std::get_if<std::shared_ptr<Types::Instance>>(&object);
         if (instance != nullptr)
         {
-            Value value = evaluate(*expression.value);
-            (*instance)->set(expression.name, value);
+            Value value = evaluate(expression->value);
+            (*instance)->set(expression->name, value);
             return value;
         }
-        throw RuntimeError(expression.name, "Only instances have fields");
+        throw RuntimeError(expression->name, "Only instances have fields");
     }
 
-    auto Interpreter::thisExpression(Expressions::This& thisExpr,
-                                     Expression& expression) -> Value
+    auto Interpreter::thisExpression(std::shared_ptr<Expressions::This>& thisExpr) -> Value
     {
-        return lookupVariable(thisExpr.keyword, expression);
+        Expression expression = thisExpr;
+        return lookupVariable(thisExpr->keyword, expression);
     }
 
-    auto Interpreter::lookupVariable(Token& name, Expression& expression)
-        -> Value
+    auto Interpreter::lookupVariable(Token& name, Expression& expression) -> Value
     {
         if (_locals.contains(expression))
         {
-            size_t distance = _locals[expression];
+            size_t distance = _locals.at(expression);
             return _environment->getAt(distance, name);
         }
         return _globalEnvironment->get(name);

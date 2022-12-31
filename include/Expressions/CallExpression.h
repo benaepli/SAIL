@@ -9,8 +9,8 @@ namespace sail::Expressions
 {
     struct Call
     {
-        std::unique_ptr<Expression> callee;
-        std::vector<std::unique_ptr<Expression>> arguments;
+        Expression callee;
+        std::vector<Expression> arguments;
         Token paren;
 
         auto operator==(const Call& other) const -> bool;
