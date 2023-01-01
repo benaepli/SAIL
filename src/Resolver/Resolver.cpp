@@ -17,7 +17,7 @@ namespace sail
     {
     }
 
-    void Resolver::resolve(std::vector<Statement>& statements)
+    void Resolver::resolve(std::vector<std::shared_ptr<Statement>>& statements)
     {
         for (auto& statement : statements)
         {
@@ -25,70 +25,24 @@ namespace sail
         }
     }
 
-    void Resolver::resolve(Statement& statement)
+    void Resolver::resolve(std::shared_ptr<Statement>& statement)
     {
-        std::visit(
-            Overload {
-                [this](std::shared_ptr<Statements::Block>& statement) -> void
-                { blockStatement(statement); },
-                [this](std::shared_ptr<Statements::Class>& statement) -> void
-                { classStatement(statement); },
-                [this](std::shared_ptr<Statements::Expression>& statement) -> void
-                { expressionStatement(statement); },
-                [this](std::shared_ptr<Statements::Function>& statement) -> void
-                { functionStatement(statement); },
-                [this](std::shared_ptr<Statements::If>& statement) -> void
-                { ifStatement(statement); },
-                [this](std::shared_ptr<Statements::Return>& statement) -> void
-                { returnStatement(statement); },
-                [this](std::shared_ptr<Statements::Variable>& statement) -> void
-                { variableStatement(statement); },
-                [this](std::shared_ptr<Statements::While>& statement) -> void
-                { whileStatement(statement); },
-            },
-            statement);
+        statement->accept(*this);
     }
 
-    void Resolver::resolve(Expression& expression)
+    void Resolver::resolve(std::shared_ptr<Expression>& expression)
     {
-        std::visit(
-            Overload {
-                [this](std::shared_ptr<Expressions::Assignment>& expression) -> void
-                { assignmentExpression(expression); },
-                [this](std::shared_ptr<Expressions::Binary>& expression) -> void
-                { binaryExpression(expression); },
-                [this](std::shared_ptr<Expressions::Call>& expression) -> void
-                { callExpression(expression); },
-                [this](std::shared_ptr<Expressions::Get>& expression) -> void
-                { getExpression(expression); },
-                [this](std::shared_ptr<Expressions::Grouping>& expression) -> void
-                { groupingExpression(expression); },
-                [this](std::shared_ptr<Expressions::Literal>& expression) -> void
-                { literalExpression(expression); },
-                [this](std::shared_ptr<Expressions::Logical>& expression) -> void
-                { logicalExpression(expression); },
-                [this](std::shared_ptr<Expressions::Set>& expression) -> void
-                { setExpression(expression); },
-                [this](std::shared_ptr<Expressions::Super>& expression) -> void
-                { superExpression(expression); },
-                [this](std::shared_ptr<Expressions::This>& expression) -> void
-                { thisExpression(expression); },
-                [this](std::shared_ptr<Expressions::Unary>& expression) -> void
-                { unaryExpression(expression); },
-                [this](std::shared_ptr<Expressions::Variable>& expression) -> void
-                { variableExpression(expression); },
-            },
-            expression);
+        expression->accept(*this);
     }
 
-    void Resolver::blockStatement(std::shared_ptr<Statements::Block>& block)
+    void Resolver::visitBlockStatement(std::shared_ptr<Statements::Block>& block)
     {
         beginScope();
         resolve(block->statements);
         endScope();
     }
 
-    void Resolver::classStatement(std::shared_ptr<Statements::Class>& classStatement)
+    void Resolver::visitClassStatement(std::shared_ptr<Statements::Class>& classStatement)
     {
         ClassType enclosingClass = _currentClass;
         _currentClass = ClassType::eClass;
@@ -104,7 +58,7 @@ namespace sail
                                    "A class cannot inherit from itself");
             }
 
-            Expression superclass = classStatement->superclass;
+            std::shared_ptr<Expression> superclass = classStatement->superclass;
             resolve(superclass);
 
             _currentClass |= ClassType::eSubclass;
@@ -128,36 +82,36 @@ namespace sail
         _currentClass = enclosingClass;
     }
 
-    void Resolver::expressionStatement(std::shared_ptr<Statements::Expression>& expression)
+    void Resolver::visitExpressionStatement(std::shared_ptr<Statements::Expression>& expression)
     {
         resolve(expression->expression);
     }
 
-    void Resolver::functionStatement(std::shared_ptr<Statements::Function>& function)
+    void Resolver::visitFunctionStatement(std::shared_ptr<Statements::Function>& function)
     {
         declare(function->name);
         define(function->name);
         resolveFunction(function, FunctionType::eFunction);
     }
 
-    void Resolver::ifStatement(std::shared_ptr<Statements::If>& ifStatement)
+    void Resolver::visitIfStatement(std::shared_ptr<Statements::If>& ifStatement)
     {
         resolve(ifStatement->condition);
         resolve(ifStatement->thenBranch);
-        if (!statementIsNullptr(ifStatement->elseBranch))
+        if (ifStatement->elseBranch != nullptr)
         {
             resolve(ifStatement->elseBranch);
         }
     }
 
-    void Resolver::returnStatement(std::shared_ptr<Statements::Return>& returnStatement)
+    void Resolver::visitReturnStatement(std::shared_ptr<Statements::Return>& returnStatement)
     {
         if (_currentFunction == FunctionType::eNone)
         {
             throw RuntimeError(returnStatement->keyword, "Cannot return from top-level code.");
         }
 
-        if (!expressionIsNullptr(returnStatement->value))
+        if (returnStatement->value != nullptr)
         {
             if (_currentFunction == FunctionType::eInitializer)
             {
@@ -169,37 +123,37 @@ namespace sail
         }
     }
 
-    void Resolver::whileStatement(std::shared_ptr<Statements::While>& whileStatement)
+    void Resolver::visitWhileStatement(std::shared_ptr<Statements::While>& whileStatement)
     {
         resolve(whileStatement->condition);
         resolve(whileStatement->body);
     }
 
-    void Resolver::variableStatement(std::shared_ptr<Statements::Variable>& variable)
+    void Resolver::visitVariableStatement(std::shared_ptr<Statements::Variable>& variable)
     {
         declare(variable->name);
-        if (!expressionIsNullptr(variable->initializer))
+        if (variable->initializer != nullptr)
         {
             resolve(variable->initializer);
         }
         define(variable->name);
     }
 
-    void Resolver::assignmentExpression(std::shared_ptr<Expressions::Assignment>& assignment)
+    void Resolver::visitAssignmentExpression(std::shared_ptr<Expressions::Assignment>& assignment)
     {
         resolve(assignment->value);
 
-        Expression expression = assignment;
+        std::shared_ptr<Expression> expression = assignment;
         resolveLocal(expression, assignment->name);
     }
 
-    void Resolver::binaryExpression(std::shared_ptr<Expressions::Binary>& binary)
+    void Resolver::visitBinaryExpression(std::shared_ptr<Expressions::Binary>& binary)
     {
         resolve(binary->left);
         resolve(binary->right);
     }
 
-    void Resolver::callExpression(std::shared_ptr<Expressions::Call>& call)
+    void Resolver::visitCallExpression(std::shared_ptr<Expressions::Call>& call)
     {
         resolve(call->callee);
         for (auto& argument : call->arguments)
@@ -208,34 +162,34 @@ namespace sail
         }
     }
 
-    void Resolver::getExpression(std::shared_ptr<Expressions::Get>& get)
+    void Resolver::visitGetExpression(std::shared_ptr<Expressions::Get>& get)
     {
         resolve(get->object);
     }
 
-    void Resolver::groupingExpression(std::shared_ptr<Expressions::Grouping>& grouping)
+    void Resolver::visitGroupingExpression(std::shared_ptr<Expressions::Grouping>& grouping)
     {
         resolve(grouping->expression);
     }
 
-    void Resolver::literalExpression(std::shared_ptr<Expressions::Literal>& literal)
+    void Resolver::visitLiteralExpression(std::shared_ptr<Expressions::Literal>& literal)
     {
         // Do nothing
     }
 
-    void Resolver::logicalExpression(std::shared_ptr<Expressions::Logical>& logical)
+    void Resolver::visitLogicalExpression(std::shared_ptr<Expressions::Logical>& logical)
     {
         resolve(logical->left);
         resolve(logical->right);
     }
 
-    void Resolver::setExpression(std::shared_ptr<Expressions::Set>& set)
+    void Resolver::visitSetExpression(std::shared_ptr<Expressions::Set>& set)
     {
         resolve(set->value);
         resolve(set->object);
     }
 
-    void Resolver::superExpression(std::shared_ptr<Expressions::Super>& super)
+    void Resolver::visitSuperExpression(std::shared_ptr<Expressions::Super>& super)
     {
         const bool isInClass = static_cast<bool>(_currentClass & ClassType::eClass);
         if (!isInClass)
@@ -249,11 +203,11 @@ namespace sail
             throw RuntimeError(super->keyword, "Cannot use 'super' in a class with no superclass.");
         }
 
-        Expression expression = super;
+        std::shared_ptr<Expression> expression = super;
         resolveLocal(expression, super->keyword);
     }
 
-    void Resolver::thisExpression(std::shared_ptr<Expressions::This>& thisExpr)
+    void Resolver::visitThisExpression(std::shared_ptr<Expressions::This>& thisExpr)
     {
         const bool isInClass = static_cast<bool>(_currentClass & ClassType::eClass);
         if (!isInClass)
@@ -261,16 +215,16 @@ namespace sail
             throw RuntimeError(thisExpr->keyword, "Cannot use 'this' outside of a class.");
         }
 
-        Expression expression = thisExpr;
+        std::shared_ptr<Expression> expression = thisExpr;
         resolveLocal(expression, thisExpr->keyword);
     }
 
-    void Resolver::unaryExpression(std::shared_ptr<Expressions::Unary>& unary)
+    void Resolver::visitUnaryExpression(std::shared_ptr<Expressions::Unary>& unary)
     {
         resolve(unary->right);
     }
 
-    void Resolver::variableExpression(std::shared_ptr<Expressions::Variable>& variable)
+    void Resolver::visitVariableExpression(std::shared_ptr<Expressions::Variable>& variable)
     {
         if (!_scopes.empty() && _scopes.back().contains(variable->name.lexeme)
             && !_scopes.back()[variable->name.lexeme])
@@ -279,7 +233,7 @@ namespace sail
                                "Cannot read local variable in its own initializer.");
         }
 
-        Expression expression = variable;
+        std::shared_ptr<Expression> expression = variable;
         resolveLocal(expression, variable->name);
     }
 
@@ -319,7 +273,7 @@ namespace sail
         _scopes.back()[name.lexeme] = true;
     }
 
-    void Resolver::resolveLocal(Expression& expression, const Token& name)
+    void Resolver::resolveLocal(std::shared_ptr<Expression>& expression, const Token& name)
     {
         for (int64_t i = static_cast<int64_t>(_scopes.size()) - 1; i >= 0; i--)
         {

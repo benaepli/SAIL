@@ -5,13 +5,22 @@
 namespace sail::Expressions
 {
     struct Super
+        : public Expression
+        , public std::enable_shared_from_this<Super>
     {
         Token keyword;
         Token method;
 
-        auto operator==(const Super& other) const -> bool
+        void accept(ExpressionVisitor& visitor) override
         {
-            return keyword == other.keyword && method == other.method;
+            std::shared_ptr<Super> shared = shared_from_this();
+            visitor.visitSuperExpression(shared);
+        }
+
+        Super(Token keyword, Token method)
+            : keyword(std::move(keyword))
+            , method(std::move(method))
+        {
         }
     };
 }  // namespace sail::Expressions

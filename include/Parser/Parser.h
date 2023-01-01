@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Expressions/Expressions.h"
+#include "Statements/Statement.h"
 #include "Statements/Statements.h"
 #include "Token/Token.h"
 
@@ -15,35 +16,35 @@ namespace sail
       public:
         explicit Parser(std::vector<Token>& tokens);
 
-        auto parse() -> std::vector<Statement>;
+        auto parse() -> std::vector<std::shared_ptr<Statement>>;  // Unperformant, but a prototype
 
       private:
-        auto statement() -> Statement;
-        auto declaration() -> Statement;
-        auto classDeclaration() -> Statement;
-        auto varDeclaration() -> Statement;
-        auto blockStatement() -> Statement;
-        auto expressionStatement() -> Statement;
+        auto statement() -> std::shared_ptr<Statement>;
+        auto declaration() -> std::shared_ptr<Statement>;
+        auto classDeclaration() -> std::shared_ptr<Statement>;
+        auto varDeclaration() -> std::shared_ptr<Statement>;
+        auto blockStatement() -> std::shared_ptr<Statement>;
+        auto expressionStatement() -> std::shared_ptr<Statement>;
         auto functionStatement() -> std::shared_ptr<Statements::Function>;
-        auto whileStatement() -> Statement;
-        auto ifStatement() -> Statement;
-        auto forStatement() -> Statement;
-        auto returnStatement() -> Statement;
+        auto whileStatement() -> std::shared_ptr<Statement>;
+        auto ifStatement() -> std::shared_ptr<Statement>;
+        auto forStatement() -> std::shared_ptr<Statement>;
+        auto returnStatement() -> std::shared_ptr<Statement>;
 
-        auto expression() -> Expression;
-        auto assignment() -> Expression;
-        auto orExpression() -> Expression;
-        auto andExpression() -> Expression;
-        auto equality() -> Expression;
-        auto comparison() -> Expression;
-        auto term() -> Expression;
-        auto factor() -> Expression;
-        auto unary() -> Expression;
-        auto call() -> Expression;
-        auto primary() -> Expression;
+        auto expression() -> std::shared_ptr<Expression>;
+        auto assignment() -> std::shared_ptr<Expression>;
+        auto orExpression() -> std::shared_ptr<Expression>;
+        auto andExpression() -> std::shared_ptr<Expression>;
+        auto equality() -> std::shared_ptr<Expression>;
+        auto comparison() -> std::shared_ptr<Expression>;
+        auto term() -> std::shared_ptr<Expression>;
+        auto factor() -> std::shared_ptr<Expression>;
+        auto unary() -> std::shared_ptr<Expression>;
+        auto call() -> std::shared_ptr<Expression>;
+        auto primary() -> std::shared_ptr<Expression>;
 
-        inline auto block() -> std::vector<Statement>;
-        inline auto finishCall(Expression callee) -> Expression;
+        inline auto block() -> std::vector<std::shared_ptr<Statement>>;
+        inline auto finishCall(std::shared_ptr<Expression>& callee) -> std::shared_ptr<Expression>;
 
         auto match(const std::vector<TokenType>& tokenTypes) -> bool;
         auto check(TokenType tokenType) -> bool;

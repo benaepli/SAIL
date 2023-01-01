@@ -5,12 +5,20 @@
 namespace sail::Expressions
 {
     struct Literal
+        : public Expression
+        , public std::enable_shared_from_this<Literal>
     {
         LiteralType literal;
 
-        auto operator==(const Literal& other) const -> bool
+        void accept(ExpressionVisitor& visitor) override
         {
-            return literal == other.literal;
+            std::shared_ptr<Literal> shared = shared_from_this();
+            visitor.visitLiteralExpression(shared);
+        }
+
+        explicit Literal(LiteralType literal)
+            : literal(std::move(literal))
+        {
         }
     };
 }  // namespace sail::Expressions

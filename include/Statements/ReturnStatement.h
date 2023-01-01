@@ -9,9 +9,23 @@
 namespace sail::Statements
 {
     struct Return
+        : public Statement
+        , public std::enable_shared_from_this<Return>
     {
-        sail::Expression value;
+        std::shared_ptr<sail::Expression> value;
         Token keyword;
+
+        void accept(StatementVisitor& visitor) override
+        {
+            std::shared_ptr<Return> shared = shared_from_this();
+            visitor.visitReturnStatement(shared);
+        }
+
+        Return(Token keyword, std::shared_ptr<sail::Expression> value)
+            : value(std::move(value))
+            , keyword(std::move(keyword))
+        {
+        }
     };
 
 }  // namespace sail::Statements

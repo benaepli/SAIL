@@ -8,11 +8,26 @@
 namespace sail::Expressions
 {
     struct Call
+        : public Expression
+        , public std::enable_shared_from_this<Call>
     {
-        Expression callee;
-        std::vector<Expression> arguments;
+        std::shared_ptr<Expression> callee;
         Token paren;
+        std::vector<std::shared_ptr<Expression>> arguments;
 
-        auto operator==(const Call& other) const -> bool;
+        void accept(ExpressionVisitor& visitor) override
+        {
+            std::shared_ptr<Call> shared = shared_from_this();
+            visitor.visitCallExpression(shared);
+        }
+
+        Call(std::shared_ptr<Expression> callee,
+             Token paren,
+             std::vector<std::shared_ptr<Expression>> arguments)
+            : callee(std::move(callee))
+            , paren(std::move(paren))
+            , arguments(std::move(arguments))
+        {
+        }
     };
 }  // namespace sail::Expressions

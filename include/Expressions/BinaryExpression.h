@@ -7,11 +7,25 @@
 namespace sail::Expressions
 {
     struct Binary
+        : public Expression
+        , public std::enable_shared_from_this<Binary>
     {
-        Expression left;
-        Expression right;
-        Token oper;
+        std::shared_ptr<Expression> left;
+        Token op;
+        std::shared_ptr<Expression> right;
 
-        auto operator==(const Binary& other) const -> bool;
+        void accept(ExpressionVisitor& visitor) override
+        {
+            std::shared_ptr<Binary> shared = shared_from_this();
+            visitor.visitBinaryExpression(shared);
+        }
+
+        Binary(std::shared_ptr<Expression> left, Token op, std::shared_ptr<Expression> right)
+            : left(std::move(left))
+            , op(std::move(op))
+            , right(std::move(right))
+        {
+        }
     };
+
 }  // namespace sail::Expressions

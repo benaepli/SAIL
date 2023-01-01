@@ -5,9 +5,20 @@
 namespace sail::Expressions
 {
     struct Grouping
+        : public Expression
+        , public std::enable_shared_from_this<Grouping>
     {
-        Expression expression;
+        std::shared_ptr<Expression> expression;
 
-        auto operator==(const Grouping& other) const -> bool;
+        void accept(ExpressionVisitor& visitor) override
+        {
+            std::shared_ptr<Grouping> shared = shared_from_this();
+            visitor.visitGroupingExpression(shared);
+        }
+
+        explicit Grouping(std::shared_ptr<Expression> expression)
+            : expression(std::move(expression))
+        {
+        }
     };
 }  // namespace sail::Expressions

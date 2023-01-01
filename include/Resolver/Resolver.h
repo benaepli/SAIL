@@ -29,43 +29,46 @@ namespace sail
     };
 
     class Resolver
+        : public ExpressionVisitor
+        , public StatementVisitor
     {
       public:
         explicit Resolver(Interpreter& interpreter);
 
-        void resolve(std::vector<Statement>& statements);
-        void resolve(Statement& statement);
-        void resolve(Expression& expression);
+        void resolve(std::vector<std::shared_ptr<Statement>>& statements);
+        void resolve(std::shared_ptr<Statement>& statement);
+        void resolve(std::shared_ptr<Expression>& expression);
 
       private:
-        void blockStatement(std::shared_ptr<Statements::Block>& block);
-        void classStatement(std::shared_ptr<Statements::Class>& classStatement);
-        void expressionStatement(std::shared_ptr<Statements::Expression>& expression);
-        void functionStatement(std::shared_ptr<Statements::Function>& function);
-        void ifStatement(std::shared_ptr<Statements::If>& ifStatement);
-        void returnStatement(std::shared_ptr<Statements::Return>& returnStatement);
-        void variableStatement(std::shared_ptr<Statements::Variable>& variable);
-        void whileStatement(std::shared_ptr<Statements::While>& whileStatement);
+        void visitBlockStatement(std::shared_ptr<Statements::Block>& block) override;
+        void visitClassStatement(std::shared_ptr<Statements::Class>& classStatement) override;
+        void visitExpressionStatement(std::shared_ptr<Statements::Expression>& expression) override;
+        void visitFunctionStatement(std::shared_ptr<Statements::Function>& function) override;
+        void visitIfStatement(std::shared_ptr<Statements::If>& ifStatement) override;
+        void visitReturnStatement(std::shared_ptr<Statements::Return>& returnStatement) override;
+        void visitVariableStatement(std::shared_ptr<Statements::Variable>& variable) override;
+        void visitWhileStatement(std::shared_ptr<Statements::While>& whileStatement) override;
 
-        void assignmentExpression(std::shared_ptr<Expressions::Assignment>& assignment);
-        void binaryExpression(std::shared_ptr<Expressions::Binary>& binary);
-        void callExpression(std::shared_ptr<Expressions::Call>& call);
-        void getExpression(std::shared_ptr<Expressions::Get>& get);
-        void groupingExpression(std::shared_ptr<Expressions::Grouping>& grouping);
-        void literalExpression(std::shared_ptr<Expressions::Literal>& literal);
-        void logicalExpression(std::shared_ptr<Expressions::Logical>& logical);
-        void setExpression(std::shared_ptr<Expressions::Set>& set);
-        void superExpression(std::shared_ptr<Expressions::Super>& super);
-        void thisExpression(std::shared_ptr<Expressions::This>& thisExpr);
-        void unaryExpression(std::shared_ptr<Expressions::Unary>& unary);
-        void variableExpression(std::shared_ptr<Expressions::Variable>& variable);
+        void visitAssignmentExpression(
+            std::shared_ptr<Expressions::Assignment>& assignment) override;
+        void visitBinaryExpression(std::shared_ptr<Expressions::Binary>& binary) override;
+        void visitCallExpression(std::shared_ptr<Expressions::Call>& call) override;
+        void visitGetExpression(std::shared_ptr<Expressions::Get>& get) override;
+        void visitGroupingExpression(std::shared_ptr<Expressions::Grouping>& grouping) override;
+        void visitLiteralExpression(std::shared_ptr<Expressions::Literal>& literal) override;
+        void visitLogicalExpression(std::shared_ptr<Expressions::Logical>& logical) override;
+        void visitSetExpression(std::shared_ptr<Expressions::Set>& set) override;
+        void visitSuperExpression(std::shared_ptr<Expressions::Super>& super) override;
+        void visitThisExpression(std::shared_ptr<Expressions::This>& thisExpr) override;
+        void visitUnaryExpression(std::shared_ptr<Expressions::Unary>& unary) override;
+        void visitVariableExpression(std::shared_ptr<Expressions::Variable>& variable) override;
 
         void beginScope();
         void endScope();
         void declare(const Token& name);
         void define(const Token& name);
         void resolveFunction(std::shared_ptr<Statements::Function>& function, FunctionType type);
-        void resolveLocal(Expression& expression, const Token& name);
+        void resolveLocal(std::shared_ptr<Expression>& expression, const Token& name);
 
         Interpreter& _interpreter;
         std::vector<ankerl::unordered_dense::map<std::string, bool>> _scopes;

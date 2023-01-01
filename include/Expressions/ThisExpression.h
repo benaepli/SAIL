@@ -5,12 +5,20 @@
 namespace sail::Expressions
 {
     struct This
+        : public Expression
+        , public std::enable_shared_from_this<This>
     {
         Token keyword;
 
-        auto operator==(const This& other) const -> bool
+        void accept(ExpressionVisitor& visitor) override
         {
-            return keyword == other.keyword;
+            std::shared_ptr<This> shared = shared_from_this();
+            visitor.visitThisExpression(shared);
+        }
+
+        explicit This(Token keyword)
+            : keyword(std::move(keyword))
+        {
         }
     };
 }  // namespace sail::Expressions

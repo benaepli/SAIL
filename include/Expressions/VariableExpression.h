@@ -5,12 +5,21 @@
 namespace sail::Expressions
 {
     struct Variable
+        : public Expression
+        , public std::enable_shared_from_this<Variable>
     {
         Token name;
 
-        auto operator==(const Variable& other) const -> bool
+        void accept(ExpressionVisitor& visitor) override
         {
-            return name == other.name;
+            std::shared_ptr<Variable> shared = shared_from_this();
+            visitor.visitVariableExpression(shared);
+        }
+
+        explicit Variable(Token name)
+            : name(std::move(name))
+        {
         }
     };
+
 }  // namespace sail::Expressions

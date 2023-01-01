@@ -28,11 +28,3 @@
 // SAIL_HASH_DECLARATION(sail::Expressions::Unary)
 // SAIL_HASH_DECLARATION(sail::Expressions::Variable)
 // SAIL_HASH_DECLARATION(sail::Expression)
-
-namespace sail
-{
-    inline auto expressionIsNullptr(const Expression& expression) -> bool
-    {
-        return std::visit([](auto& expression) { return expression == nullptr; }, expression);
-    }
-}  // namespace sail
