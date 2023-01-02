@@ -29,5 +29,16 @@ let f = 0;
   {
     let f = 3;
     loop(f);
+
+    fn loop(i)
+    {
+      print("Second loop");
+      if (i < 3)
+      {
+        i=i+1;
+        loop(i);
+      }
+    }
+    loop(0);
   }
 }

@@ -13,27 +13,24 @@ namespace sail::Types
         : _body(std::move(body))
         , _closure(std::move(closure))
         , _isInitializer(isInitializer)
-        , _localEnvironment(std::make_shared<Environment>(_closure))
     {
     }
 
     auto Function::call(Interpreter& interpreter, std::vector<Value>& arguments) -> Value
     {
-        auto& environment = _localEnvironment;
-        environment->reset();
+        auto environment = std::make_shared<Environment>(_closure);
 
-        return process(interpreter, arguments);
+        return process(interpreter, arguments, environment);
     }
 
     auto Function::call(Interpreter& interpreter,
                         std::vector<Value>& arguments,
                         std::shared_ptr<Instance> instance) -> Value
     {
-        auto& environment = _localEnvironment;
-        environment->reset();
+        auto environment = std::make_shared<Environment>(_closure);
         environment->define("this", instance);
 
-        return process(interpreter, arguments);
+        return process(interpreter, arguments, environment);
     }
 
     auto Function::arity() const -> size_t
@@ -46,22 +43,24 @@ namespace sail::Types
         return _body->name.lexeme;
     }
 
-    auto Function::process(Interpreter& interpreter, std::vector<Value>& arguments) -> Value
+    auto Function::process(Interpreter& interpreter,
+                           std::vector<Value>& arguments,
+                           std::shared_ptr<Environment>& environment) -> Value
     {
         for (size_t i = 0; i < _body->parameters.size(); i++)
         {
-            _localEnvironment->define(_body->parameters[i].lexeme, arguments[i]);
+            environment->define(_body->parameters[i].lexeme, arguments[i]);
         }
 
         try
         {
-            interpreter.executeBlock(_body->body, _localEnvironment);
+            interpreter.executeBlock(_body->body, environment);
         }
         catch (Return& returnValue)
         {
             if (_isInitializer)
             {
-                return _localEnvironment->getAt(0, "this");
+                return environment->getAt(0, "this");
             }
 
             return returnValue.value();

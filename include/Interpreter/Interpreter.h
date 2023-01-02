@@ -12,21 +12,23 @@ namespace sail
 {
     class Return : public std::exception
     {
-    public:
+      public:
         explicit Return(Value value)
-            : _value(std::move(value)) { }
+            : _value(std::move(value))
+        {
+        }
 
         auto value() const -> Value { return _value; }
 
-    private:
+      private:
         Value _value;
     };
 
     class Interpreter final
         : public ExpressionVisitor
-          , public StatementVisitor
+        , public StatementVisitor
     {
-    public:
+      public:
         Interpreter();
 
         void execute(std::shared_ptr<Statement>& statement);
@@ -37,7 +39,9 @@ namespace sail
 
         void resolve(const std::shared_ptr<Expression>& expression, size_t depth);
 
-    private:
+        auto getCurrentEnvironment() const -> std::shared_ptr<Environment> { return _environment; }
+
+      private:
         auto evaluate(std::shared_ptr<Expression>& expression) -> Value&;
 
         void visitBlockStatement(Statements::Block& blockStatement,
@@ -82,8 +86,8 @@ namespace sail
         void visitVariableExpression(Expressions::Variable& variableExpression,
                                      std::shared_ptr<Expression>& shared) override;
 
-        auto lookupVariable(const Token& name,
-                            const std::shared_ptr<Expression>& expression) -> Value;
+        auto lookupVariable(const Token& name, const std::shared_ptr<Expression>& expression)
+            -> Value;
 
         std::shared_ptr<Environment> _globalEnvironment;
         std::shared_ptr<Environment> _environment;
@@ -91,4 +95,4 @@ namespace sail
 
         Value _returnValue;
     };
-} // namespace sail
+}  // namespace sail

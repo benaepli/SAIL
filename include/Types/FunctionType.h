@@ -26,11 +26,12 @@ namespace sail::Types
         auto name() const -> std::string const& override;
 
       private:
-        auto process(Interpreter& interpreter, std::vector<Value>& arguments) -> Value;
+        auto process(Interpreter& interpreter,
+                     std::vector<Value>& arguments,
+                     std::shared_ptr<Environment>& environment) -> Value;
 
         std::shared_ptr<Statements::Function> _body;
         std::shared_ptr<Environment> _closure;
-        std::shared_ptr<Environment> _localEnvironment;
 
         bool _isInitializer;
     };
