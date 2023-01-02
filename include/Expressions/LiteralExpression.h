@@ -4,16 +4,13 @@
 
 namespace sail::Expressions
 {
-    struct Literal
-        : public Expression
-        , public std::enable_shared_from_this<Literal>
+    struct Literal final : public Expression
     {
         LiteralType literal;
 
-        void accept(ExpressionVisitor& visitor) override
+        void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) override
         {
-            std::shared_ptr<Literal> shared = shared_from_this();
-            visitor.visitLiteralExpression(shared);
+            visitor.visitLiteralExpression(*this, shared);
         }
 
         explicit Literal(LiteralType literal)

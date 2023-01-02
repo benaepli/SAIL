@@ -26,6 +26,7 @@ target("SAIL_lib")
     else
         add_defines("SAIL_EXPORT=")
     end
+    set_policy("build.optimization.lto", true)
 
 target("SAIL")
     set_kind("binary")
@@ -33,5 +34,6 @@ target("SAIL")
     add_files("exec/**.cpp")
     add_includedirs("include")
     add_links("SAIL_lib")
+    set_policy("build.optimization.lto", true)
 
 includes("tests/xmake.lua")

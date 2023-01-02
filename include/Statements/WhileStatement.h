@@ -7,17 +7,14 @@
 
 namespace sail::Statements
 {
-    struct While
-        : public Statement
-        , public std::enable_shared_from_this<While>
+    struct While final : public Statement
     {
         std::shared_ptr<sail::Expression> condition;
         std::shared_ptr<Statement> body;
 
-        void accept(StatementVisitor& visitor) override
+        void accept(StatementVisitor& visitor, std::shared_ptr<Statement>& shared) override
         {
-            std::shared_ptr<While> shared = shared_from_this();
-            visitor.visitWhileStatement(shared);
+            visitor.visitWhileStatement(*this, shared);
         }
 
         While(std::shared_ptr<sail::Expression> condition, std::shared_ptr<Statement> body)

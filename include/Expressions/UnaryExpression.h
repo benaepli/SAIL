@@ -4,17 +4,14 @@
 
 namespace sail::Expressions
 {
-    struct Unary
-        : public Expression
-        , public std::enable_shared_from_this<Unary>
+    struct Unary final : public Expression
     {
         Token op;
         std::shared_ptr<Expression> right;
 
-        void accept(ExpressionVisitor& visitor) override
+        void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) override
         {
-            std::shared_ptr<Unary> shared = shared_from_this();
-            visitor.visitUnaryExpression(shared);
+            visitor.visitUnaryExpression(*this, shared);
         }
 
         Unary(Token op, std::shared_ptr<Expression> right)

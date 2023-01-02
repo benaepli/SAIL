@@ -7,19 +7,16 @@
 
 namespace sail::Statements
 {
-    struct Function
-        : public Statement
-        , public std::enable_shared_from_this<Function>
+    struct Function final : public Statement
     {
         Token name;
         std::vector<Token> parameters;
         std::vector<std::shared_ptr<Statement>> body;
         bool possibleInitializer;
 
-        void accept(StatementVisitor& visitor) override
+        void accept(StatementVisitor& visitor, std::shared_ptr<Statement>& shared) override
         {
-            std::shared_ptr<Function> shared = shared_from_this();
-            visitor.visitFunctionStatement(shared);
+            visitor.visitFunctionStatement(*this, shared);
         }
 
         Function(Token name,

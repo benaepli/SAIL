@@ -5,18 +5,15 @@
 
 namespace sail::Expressions
 {
-    struct Logical
-        : public Expression
-        , public std::enable_shared_from_this<Logical>
+    struct Logical final : public Expression
     {
         std::shared_ptr<Expression> left;
         Token op;
         std::shared_ptr<Expression> right;
 
-        void accept(ExpressionVisitor& visitor) override
+        void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) override
         {
-            std::shared_ptr<Logical> shared = shared_from_this();
-            visitor.visitLogicalExpression(shared);
+            visitor.visitLogicalExpression(*this, shared);
         }
 
         Logical(std::shared_ptr<Expression> left, Token op, std::shared_ptr<Expression> right)

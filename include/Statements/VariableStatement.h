@@ -5,17 +5,14 @@
 
 namespace sail::Statements
 {
-    struct Variable
-        : public Statement
-        , public std::enable_shared_from_this<Variable>
+    struct Variable final : public Statement
     {
         Token name;
         std::shared_ptr<sail::Expression> initializer;
 
-        void accept(StatementVisitor& visitor) override
+        void accept(StatementVisitor& visitor, std::shared_ptr<Statement>& shared) override
         {
-            std::shared_ptr<Variable> shared = shared_from_this();
-            visitor.visitVariableStatement(shared);
+            visitor.visitVariableStatement(*this, shared);
         }
 
         Variable(Token name, std::shared_ptr<sail::Expression> initializer)

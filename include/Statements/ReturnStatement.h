@@ -8,17 +8,15 @@
 
 namespace sail::Statements
 {
-    struct Return
-        : public Statement
-        , public std::enable_shared_from_this<Return>
+    struct Return final : public Statement
+
     {
         std::shared_ptr<sail::Expression> value;
         Token keyword;
 
-        void accept(StatementVisitor& visitor) override
+        void accept(StatementVisitor& visitor, std::shared_ptr<Statement>& shared) override
         {
-            std::shared_ptr<Return> shared = shared_from_this();
-            visitor.visitReturnStatement(shared);
+            visitor.visitReturnStatement(*this, shared);
         }
 
         Return(Token keyword, std::shared_ptr<sail::Expression> value)

@@ -10,7 +10,7 @@
 
 namespace sail::Types
 {
-    class Function : public Callable
+    class Function final : public Callable
     {
       public:
         Function(std::shared_ptr<Statements::Function> body,

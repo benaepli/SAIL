@@ -4,16 +4,13 @@
 
 namespace sail::Expressions
 {
-    struct Variable
-        : public Expression
-        , public std::enable_shared_from_this<Variable>
+    struct Variable final : public Expression
     {
         Token name;
 
-        void accept(ExpressionVisitor& visitor) override
+        void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) override
         {
-            std::shared_ptr<Variable> shared = shared_from_this();
-            visitor.visitVariableExpression(shared);
+            visitor.visitVariableExpression(*this, shared);
         }
 
         explicit Variable(Token name)

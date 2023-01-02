@@ -6,17 +6,14 @@
 
 namespace sail::Expressions
 {
-    struct Assignment
-        : public Expression
-        , public std::enable_shared_from_this<Assignment>
+    struct Assignment final : public Expression
     {
         Token name;
         std::shared_ptr<Expression> value;
 
-        void accept(ExpressionVisitor& visitor) override
+        void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) override
         {
-            std::shared_ptr<Assignment> shared = shared_from_this();
-            visitor.visitAssignmentExpression(shared);
+            visitor.visitAssignmentExpression(*this, shared);
         }
 
         Assignment(Token name, std::shared_ptr<Expression> value)

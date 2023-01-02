@@ -8,16 +8,13 @@
 
 namespace sail::Statements
 {
-    struct Block
-        : public Statement
-        , public std::enable_shared_from_this<Block>
+    struct Block final : public Statement
     {
         std::vector<std::shared_ptr<Statement>> statements;
 
-        void accept(StatementVisitor& visitor) override
+        void accept(StatementVisitor& visitor, std::shared_ptr<Statement>& shared) override
         {
-            std::shared_ptr<Block> shared = shared_from_this();
-            visitor.visitBlockStatement(shared);
+            visitor.visitBlockStatement(*this, shared);
         }
 
         explicit Block(std::vector<std::shared_ptr<Statement>> statements)

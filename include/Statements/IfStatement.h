@@ -8,18 +8,15 @@
 namespace sail::Statements
 {
 
-    struct If
-        : public Statement
-        , public std::enable_shared_from_this<If>
+    struct If final : public Statement
     {
         std::shared_ptr<sail::Expression> condition;
         std::shared_ptr<Statement> thenBranch;
         std::shared_ptr<Statement> elseBranch;
 
-        void accept(StatementVisitor& visitor) override
+        void accept(StatementVisitor& visitor, std::shared_ptr<Statement>& shared) override
         {
-            std::shared_ptr<If> shared = shared_from_this();
-            visitor.visitIfStatement(shared);
+            visitor.visitIfStatement(*this, shared);
         }
 
         If(std::shared_ptr<sail::Expression> condition,

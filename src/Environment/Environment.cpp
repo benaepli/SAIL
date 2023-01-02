@@ -14,9 +14,10 @@ namespace sail
 
     auto Environment::get(const std::string& name) -> Value&
     {
-        if (_values.contains(name))
+        auto it = _values.find(name);
+        if (it != _values.end())
         {
-            return _values[name];
+            return it->second;
         }
 
         if (_enclosing != nullptr)
@@ -29,9 +30,10 @@ namespace sail
 
     auto Environment::get(const Token& name) -> Value&
     {
-        if (_values.contains(name.lexeme))
+        auto it = _values.find(name.lexeme);
+        if (it != _values.end())
         {
-            return _values[name.lexeme];
+            return it->second;
         }
 
         if (_enclosing != nullptr)
@@ -65,9 +67,10 @@ namespace sail
 
     void Environment::assign(const Token& name, const Value& value)
     {
-        if (_values.contains(name.lexeme))
+        auto it = _values.find(name.lexeme);
+        if (it != _values.end())
         {
-            _values[name.lexeme] = value;
+            it->second = value;
             return;
         }
 

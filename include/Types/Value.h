@@ -7,7 +7,6 @@
 #include <variant>
 
 #include "CallableType.h"
-#include "GarbageCollection/GarbageCollection.h"
 #include "InstanceType.h"
 #include "NullType.h"
 
@@ -16,16 +15,12 @@ namespace sail
     using CallablePointer = std::shared_ptr<Types::Callable>;
     using InstancePointer = std::shared_ptr<Types::Instance>;
 
-    using ValueVariantType = std::variant<std::string,
-                                          double,
-                                          bool,
-                                          Types::Null,
-                                          CallablePointer,
-                                          InstancePointer>;
+    using ValueVariantType =
+        std::variant<std::string, double, bool, Types::Null, CallablePointer, InstancePointer>;
 
     struct LiteralType;
 
-    struct Value : public ValueVariantType
+    struct Value final : public ValueVariantType
     {
         using ValueVariantType::ValueVariantType;
         using ValueVariantType::operator=;
@@ -39,7 +34,6 @@ namespace sail
         auto asNumber() const -> std::optional<double>;
 
         auto operator==(const Value& other) const -> bool;
-        friend auto operator<<(std::ostream& ostr, const Value& value)
-            -> std::ostream&;
+        friend auto operator<<(std::ostream& ostr, const Value& value) -> std::ostream&;
     };
 }  // namespace sail

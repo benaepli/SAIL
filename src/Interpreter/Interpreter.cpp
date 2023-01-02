@@ -40,16 +40,16 @@ namespace sail
 
     void Interpreter::execute(std::shared_ptr<Statement>& statement)
     {
-        statement->accept(*this);
+        statement->accept(*this, statement);
     }
 
     auto Interpreter::evaluate(std::shared_ptr<Expression>& expression) -> Value&
     {
-        expression->accept(*this);
+        expression->accept(*this, expression);
         return _returnValue;
     }
 
-    void Interpreter::resolve(std::shared_ptr<Expression>& expression, size_t depth)
+    void Interpreter::resolve(const std::shared_ptr<Expression>& expression, size_t depth)
     {
         _locals[expression] = depth;
     }
@@ -66,126 +66,136 @@ namespace sail
         _environment = std::move(previousEnvironment);
     }
 
-    void Interpreter::visitBlockStatement(std::shared_ptr<Statements::Block>& statement)
+    void Interpreter::visitBlockStatement(Statements::Block& blockStatement,
+                                          std::shared_ptr<Statement>& shared)
     {
-        executeBlock(statement->statements, std::make_shared<Environment>(_environment));
+        executeBlock(blockStatement.statements, std::make_shared<Environment>(_environment));
     }
 
-    void Interpreter::visitClassStatement(std::shared_ptr<Statements::Class>& statement)
+    void Interpreter::visitClassStatement(Statements::Class& classStatement,
+                                          std::shared_ptr<Statement>& shared)
     {
         std::shared_ptr<Types::Class> superclass = nullptr;
-        if (statement->superclass)
+        if (classStatement.superclass != nullptr)
         {
-            Value superclassObject = Types::Null {};
-            std::shared_ptr<Expression> superclassExpression = statement->superclass;
-            superclassObject = evaluate(superclassExpression);
-            auto* callable = std::get_if<std::shared_ptr<Types::Callable>>(&superclassObject);
-            if (callable == nullptr)
+            std::shared_ptr<Expression> superclassExpression = classStatement.superclass;
+            Value value = evaluate(superclassExpression);
+            auto* superclassCallable = std::get_if<std::shared_ptr<Types::Callable>>(&value);
+            if (superclassCallable == nullptr) [[unlikely]]
             {
-                throw RuntimeError(statement->superclass->name, "Superclass must be a class. (1)");
+                throw RuntimeError(classStatement.superclass->name,
+                                   "Superclass must be a class (1)");
             }
 
-            superclass = std::dynamic_pointer_cast<Types::Class>(*callable);
-            if (superclass == nullptr)
+            superclass = std::dynamic_pointer_cast<Types::Class>(*superclassCallable);
+            if (!superclass) [[unlikely]]
             {
-                throw RuntimeError(statement->superclass->name, "Superclass must be a class. (2)");
+                throw RuntimeError(classStatement.superclass->name,
+                                   "Superclass must be a class (2)");
             }
         }
 
-        _environment->define(statement->name.lexeme, Types::Null {});
+        _environment->define(classStatement.name, Types::Null {});
 
         ankerl::unordered_dense::map<std::string, std::shared_ptr<Types::Function>> methods;
-        for (std::shared_ptr<Statements::Function>& method : statement->methods)
+        for (std::shared_ptr<Statements::Function>& method : classStatement.methods)
         {
             auto function = std::make_shared<Types::Function>(
                 method, _environment, method->possibleInitializer);
             methods[function->name()] = function;
         }
 
-        auto klass = std::make_shared<Types::Class>(statement->name.lexeme, superclass, methods);
-        _environment->assign(statement->name, klass);
+        auto klass =
+            std::make_shared<Types::Class>(classStatement.name.lexeme, superclass, methods);
+        _environment->assign(classStatement.name, klass);
     }
 
-    void Interpreter::visitExpressionStatement(std::shared_ptr<Statements::Expression>& statement)
+    void Interpreter::visitExpressionStatement(Statements::Expression& expressionStatement,
+                                               std::shared_ptr<Statement>& shared)
     {
-        evaluate(statement->expression);
+        evaluate(expressionStatement.expression);
     }
 
-    void Interpreter::visitFunctionStatement(std::shared_ptr<Statements::Function>& statement)
+    void Interpreter::visitFunctionStatement(Statements::Function& functionStatement,
+                                             std::shared_ptr<Statement>& shared)
     {
-        auto function = std::make_shared<Types::Function>(statement, _environment, false);
-        _environment->define(function->name(), function);
+        auto functionStatementPointer = std::dynamic_pointer_cast<Statements::Function>(shared);
+        std::shared_ptr<Types::Function> function =
+            std::make_shared<Types::Function>(functionStatementPointer, _environment, false);
+        _environment->define(functionStatement.name, function);
     }
 
-    void Interpreter::visitIfStatement(std::shared_ptr<Statements::If>& statement)
+    void Interpreter::visitIfStatement(Statements::If& ifStatement,
+                                       std::shared_ptr<Statement>& shared)
     {
-        if (evaluate(statement->condition).isTruthy())
+        if (evaluate(ifStatement.condition).isTruthy())
         {
-            execute(statement->thenBranch);
+            execute(ifStatement.thenBranch);
         }
-        else if (statement->elseBranch != nullptr)
+        else if (ifStatement.elseBranch != nullptr)
         {
-            execute(statement->elseBranch);
+            execute(ifStatement.elseBranch);
         }
     }
 
-    void Interpreter::visitReturnStatement(std::shared_ptr<Statements::Return>& statement)
+    void Interpreter::visitReturnStatement(Statements::Return& returnStatement,
+                                           std::shared_ptr<Statement>& shared)
     {
         Value value = Types::Null {};
-
-        if (statement->value != nullptr)
+        if (returnStatement.value != nullptr)
         {
-            value = evaluate(statement->value);
+            value = evaluate(returnStatement.value);
         }
 
-        throw Return {value};
+        throw Return(value);
     }
 
-    void Interpreter::visitVariableStatement(std::shared_ptr<Statements::Variable>& statement)
+    void Interpreter::visitVariableStatement(Statements::Variable& variableStatement,
+                                             std::shared_ptr<Statement>& shared)
     {
         Value value = Types::Null {};
-
-        if (statement->initializer != nullptr)
+        if (variableStatement.initializer != nullptr) [[likely]]
         {
-            value = evaluate(statement->initializer);
+            value = evaluate(variableStatement.initializer);
         }
 
-        _environment->define(statement->name, value);
+        _environment->define(variableStatement.name, value);
     }
 
-    void Interpreter::visitWhileStatement(std::shared_ptr<Statements::While>& statement)
+    void Interpreter::visitWhileStatement(Statements::While& whileStatement,
+                                          std::shared_ptr<Statement>& shared)
     {
-        while (evaluate(statement->condition).isTruthy())
+        while (evaluate(whileStatement.condition).isTruthy())
         {
-            execute(statement->body);
+            execute(whileStatement.body);
         }
     }
 
-    void Interpreter::visitAssignmentExpression(
-        std::shared_ptr<Expressions::Assignment>& assignment)
-
+    void Interpreter::visitAssignmentExpression(Expressions::Assignment& assignmentExpression,
+                                                std::shared_ptr<Expression>& shared)
     {
-        Value value = evaluate(assignment->value);
+        Value value = evaluate(assignmentExpression.value);
 
-        if (_locals.contains(assignment))
+        auto it = _locals.find(shared);
+        if (it != _locals.end()) [[likely]]
         {
-            size_t distance = _locals[assignment];
-            _environment->assignAt(distance, assignment->name, value);
+            _environment->assignAt(it->second, assignmentExpression.name, value);
         }
         else
         {
-            _globalEnvironment->assign(assignment->name, value);
+            _globalEnvironment->assign(assignmentExpression.name, value);
         }
 
-        _returnValue = value;
+        _returnValue = std::move(value);
     }
 
-    void Interpreter::visitBinaryExpression(std::shared_ptr<Expressions::Binary>& expression)
+    void Interpreter::visitBinaryExpression(Expressions::Binary& binaryExpression,
+                                            std::shared_ptr<Expression>& shared)
     {
-        Value left = evaluate(expression->left);
-        Value right = evaluate(expression->right);
+        Value left = evaluate(binaryExpression.left);
+        Value right = evaluate(binaryExpression.right);
 
-        if (expression->op.type == TokenType::ePlus)
+        if (binaryExpression.op.type == TokenType::ePlus)
         {
             if (left.isString() && right.isString())
             {
@@ -194,13 +204,13 @@ namespace sail
             }
         }
 
-        if (expression->op.type == TokenType::eBangEqual)
+        if (binaryExpression.op.type == TokenType::eBangEqual)
         {
             _returnValue = left != right;
             return;
         }
 
-        if (expression->op.type == TokenType::eEqualEqual)
+        if (binaryExpression.op.type == TokenType::eEqualEqual)
         {
             _returnValue = left == right;
             return;
@@ -209,15 +219,15 @@ namespace sail
         std::optional<double> leftNumber = left.asNumber();
         std::optional<double> rightNumber = right.asNumber();
 
-        if (!leftNumber.has_value() || !rightNumber.has_value())
+        if (!leftNumber.has_value() || !rightNumber.has_value()) [[unlikely]]
         {
-            throw RuntimeError(expression->op, "Cannot perform arithmetic on non-numbers");
+            throw RuntimeError(binaryExpression.op, "Cannot perform arithmetic on non-numbers");
         }
 
         double leftValue = *leftNumber;
         double rightValue = *rightNumber;
 
-        switch (expression->op.type)
+        switch (binaryExpression.op.type)
         {
             case TokenType::eMinus:
                 _returnValue = leftValue - rightValue;
@@ -243,57 +253,69 @@ namespace sail
             case TokenType::eLessEqual:
                 _returnValue = leftValue <= rightValue;
                 return;
-            default:;
+            default:
+                [[unlikely]] break;
         }
 
-        throw RuntimeError(expression->op, "Unknown operator");
+        throw RuntimeError(binaryExpression.op, "Unknown operator");
     }
 
-    void Interpreter::visitCallExpression(std::shared_ptr<Expressions::Call>& expression)
+    void Interpreter::visitCallExpression(Expressions::Call& callExpression,
+                                          std::shared_ptr<Expression>& shared)
     {
-        Value callee = evaluate(expression->callee);
+        Value callee = evaluate(callExpression.callee);
+
         std::vector<Value> arguments;
-        auto each = [&](auto& argument) -> void { arguments.push_back(evaluate(argument)); };
-        std::ranges::for_each(expression->arguments, each);
+        for (auto& argument : callExpression.arguments)
+        {
+            arguments.push_back(evaluate(argument));
+        }
 
         auto* callablePointer = std::get_if<std::shared_ptr<Types::Callable>>(&callee);
-        if (callablePointer != nullptr)
+        if (callablePointer == nullptr) [[unlikely]]
         {
-            std::shared_ptr<Types::Callable> callable = *callablePointer;
-            size_t arity = callable->arity();
-            if (arguments.size() != arity && arity != std::numeric_limits<size_t>::max())
-            {
-                throw RuntimeError(
-                    expression->paren,
-                    fmt::format(
-                        "Expected {} arguments but got {}", callable->arity(), arguments.size()));
-            }
-            _returnValue = callable->call(*this, arguments);
-            return;
+            throw RuntimeError(callExpression.paren, "Can only call functions and classes");
         }
 
-        throw RuntimeError(expression->paren, "Can only call functions and classes");
+        auto callable = *callablePointer;
+        if (callable == nullptr) [[unlikely]]
+        {
+            throw RuntimeError(callExpression.paren, "Can only call functions and classes");
+        }
+
+        size_t arity = callable->arity();
+        if (arguments.size() != arity && arity != std::numeric_limits<size_t>::max()) [[unlikely]]
+        {
+            throw RuntimeError(
+                callExpression.paren,
+                fmt::format(
+                    "Expected {} arguments but got {}", callable->arity(), arguments.size()));
+        }
+
+        _returnValue = callable->call(*this, arguments);
     }
 
-    void Interpreter::visitGetExpression(std::shared_ptr<Expressions::Get>& expression)
+    void Interpreter::visitGetExpression(Expressions::Get& getExpression,
+                                         std::shared_ptr<Expression>& shared)
     {
-        Value object = evaluate(expression->object);
+        Value object = evaluate(getExpression.object);
         auto* instance = std::get_if<std::shared_ptr<Types::Instance>>(&object);
-        if (instance != nullptr)
+        if (instance == nullptr) [[unlikely]]
         {
-            _returnValue = (*instance)->get(expression->name);
-            return;
+            throw RuntimeError(getExpression.name, "Only instances have properties");
         }
-        throw RuntimeError(expression->name, "Only instances have properties");
+
+        _returnValue = (*instance)->get(getExpression.name);
     }
 
-    void Interpreter::visitGroupingExpression(std::shared_ptr<Expressions::Grouping>& expression)
-
+    void Interpreter::visitGroupingExpression(Expressions::Grouping& groupingExpression,
+                                              std::shared_ptr<Expression>& shared)
     {
-        _returnValue = evaluate(expression->expression);
+        _returnValue = evaluate(groupingExpression.expression);
     }
 
-    void Interpreter::visitLiteralExpression(std::shared_ptr<Expressions::Literal>& expression)
+    void Interpreter::visitLiteralExpression(Expressions::Literal& literalExpression,
+                                             std::shared_ptr<Expression>& shared)
     {
         Value value {};
 
@@ -304,19 +326,21 @@ namespace sail
                 [&](const bool& val) { value = val; },
                 [&](const Types::Null&) { value = Types::Null {}; },
             },
-            expression->literal);
+            literalExpression.literal);
 
-        _returnValue = value;
+        _returnValue = std::move(value);
     }
 
-    void Interpreter::visitLogicalExpression(std::shared_ptr<Expressions::Logical>& expression)
+    void Interpreter::visitLogicalExpression(Expressions::Logical& logicalExpression,
+                                             std::shared_ptr<Expression>& shared)
     {
-        Value left = evaluate(expression->left);
-        if (expression->op.type == TokenType::eOr)
+        Value left = evaluate(logicalExpression.left);
+
+        if (logicalExpression.op.type == TokenType::eOr)
         {
             if (left.isTruthy())
             {
-                _returnValue = left;
+                _returnValue = std::move(left);
                 return;
             }
         }
@@ -324,109 +348,111 @@ namespace sail
         {
             if (!left.isTruthy())
             {
-                _returnValue = left;
+                _returnValue = std::move(left);
                 return;
             }
         }
-        _returnValue = evaluate(expression->right);
+
+        _returnValue = evaluate(logicalExpression.right);
     }
 
-    void Interpreter::visitSetExpression(std::shared_ptr<Expressions::Set>& expression)
+    void Interpreter::visitSetExpression(Expressions::Set& setExpression,
+                                         std::shared_ptr<Expression>& shared)
     {
-        Value object = evaluate(expression->object);
+        Value object = evaluate(setExpression.object);
+
         auto* instance = std::get_if<std::shared_ptr<Types::Instance>>(&object);
-        if (instance != nullptr)
+        if (instance == nullptr) [[unlikely]]
         {
-            Value value = evaluate(expression->value);
-            (*instance)->set(expression->name, value);
-            _returnValue = value;
-            return;
-        }
-        throw RuntimeError(expression->name, "Only instances have fields");
-    }
-
-    void Interpreter::visitSuperExpression(std::shared_ptr<Expressions::Super>& super)
-    {
-        if (_locals.contains(super))
-        {
-            size_t distance = _locals.at(super);
-            Value superClassValue = _environment->getAt(distance, "super");
-            auto* superclassCallable =
-                std::get_if<std::shared_ptr<Types::Callable>>(&superClassValue);
-            if (superclassCallable == nullptr)
-            {
-                throw RuntimeError(super->keyword, "Superclass must be a class (3)");
-            }
-
-            auto superclass = std::dynamic_pointer_cast<Types::Class>(*superclassCallable);
-            if (!superclass)
-            {
-                throw RuntimeError(super->keyword, "Superclass must be a class (4)");
-            }
-
-            Value object = _environment->getAt(distance, "this");
-            auto* instance = std::get_if<std::shared_ptr<Types::Instance>>(&object);
-            if (instance == nullptr)
-            {
-                throw RuntimeError(super->keyword, "Superclass must be a class (5)");
-            }
-
-            std::shared_ptr<Types::Function> memberFunction =
-                superclass->findMemberFunction(super->method.lexeme);
-
-            std::shared_ptr<Types::Method> method =
-                std::make_shared<Types::Method>(*instance, memberFunction);
-            _returnValue = method;
-            return;
+            throw RuntimeError(setExpression.name, "Only instances have fields");
         }
 
-        throw RuntimeError(super->keyword, "Superclass must be a class (6)");
+        Value value = evaluate(setExpression.value);
+        (*instance)->set(setExpression.name, value);
+        _returnValue = std::move(value);
     }
 
-    void Interpreter::visitThisExpression(std::shared_ptr<Expressions::This>& thisExpr)
+    void Interpreter::visitSuperExpression(Expressions::Super& superExpression,
+                                           std::shared_ptr<Expression>& shared)
     {
-        std::shared_ptr<Expression> expression = thisExpr;
-        _returnValue = lookupVariable(thisExpr->keyword, expression);
+        size_t distance = _locals[shared];
+        Value superclassValue = _environment->getAt(distance, "super");
+        auto* superclassCallable = std::get_if<std::shared_ptr<Types::Callable>>(&superclassValue);
+        if (superclassCallable == nullptr) [[unlikely]]
+        {
+            throw RuntimeError(superExpression.keyword, "Superclass must be a class");
+        }
+
+        auto superclass = std::dynamic_pointer_cast<Types::Class>(*superclassCallable);
+        if (superclass == nullptr) [[unlikely]]
+        {
+            throw RuntimeError(superExpression.keyword, "Superclass must be a class");
+        }
+
+        Value objectValue = _environment->getAt(distance, "this");
+        auto* objectInstance = std::get_if<std::shared_ptr<Types::Instance>>(&objectValue);
+        if (objectInstance == nullptr) [[unlikely]]
+        {
+            throw RuntimeError(superExpression.keyword, "Superclass must be a class");
+        }
+
+        std::shared_ptr<Types::Callable> method =
+            superclass->findMemberFunction(superExpression.method.lexeme);
+        if (method == nullptr) [[unlikely]]
+        {
+            throw RuntimeError(superExpression.method, "Undefined property");
+        }
+
+        _returnValue = method;
     }
 
-    void Interpreter::visitUnaryExpression(std::shared_ptr<Expressions::Unary>& expression)
+    void Interpreter::visitThisExpression(Expressions::This& thisExpression,
+                                          std::shared_ptr<Expression>& shared)
     {
-        Value right = evaluate(expression->right);
-        switch (expression->op.type)
+        _returnValue = lookupVariable(thisExpression.keyword, shared);
+    }
+
+    void Interpreter::visitUnaryExpression(Expressions::Unary& unaryExpression,
+                                           std::shared_ptr<Expression>& shared)
+    {
+        Value right = evaluate(unaryExpression.right);
+        switch (unaryExpression.op.type)
         {
             case TokenType::eMinus:
             {
                 std::optional<double> number = right.asNumber();
-                if (number.has_value())
+                if (number.has_value()) [[likely]]
                 {
                     _returnValue = -*number;
                     return;
                 }
-                throw RuntimeError(expression->op, "Cannot negate a non-number");
+                throw RuntimeError(unaryExpression.op, "Cannot negate a non-number");
             }
             case TokenType::eBang:
             {
                 _returnValue = !right.isTruthy();
                 return;
             }
-            default:;
+            default:
+                [[unlikely]];
         }
 
         _returnValue = Types::Null {};
     }
 
-    void Interpreter::visitVariableExpression(std::shared_ptr<Expressions::Variable>& variable)
+    void Interpreter::visitVariableExpression(Expressions::Variable& variableExpression,
+                                              std::shared_ptr<Expression>& shared)
     {
-        std::shared_ptr<Expression> expression = variable;
-        _returnValue = lookupVariable(variable->name, expression);
+        _returnValue = lookupVariable(variableExpression.name, shared);
     }
 
-    auto Interpreter::lookupVariable(Token& name, std::shared_ptr<Expression>& expression) -> Value
+    auto Interpreter::lookupVariable(const Token& name,
+                                     const std::shared_ptr<Expression>& expression) -> Value
     {
-        if (_locals.contains(expression))
+        auto it = _locals.find(expression);
+        if (it != _locals.end()) [[likely]]
         {
-            size_t distance = _locals.at(expression);
-            return _environment->getAt(distance, name);
+            return _environment->getAt(it->second, name.lexeme);
         }
         return _globalEnvironment->get(name);
     }

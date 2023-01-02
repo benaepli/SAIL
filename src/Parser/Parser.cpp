@@ -127,7 +127,7 @@ namespace sail
 
     auto Parser::blockStatement() -> std::shared_ptr<Statement>
     {
-        std::vector<std::shared_ptr<Statement>> statements {};
+        std::vector<std::shared_ptr<Statement>> statements = block();
         return std::make_shared<Statements::Block>(statements);
     }
 

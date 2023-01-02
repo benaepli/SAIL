@@ -3,7 +3,6 @@
 
 #include "Native/DefineNative.h"
 
-#include "GarbageCollection/GarbageCollection.h"
 #include "Native/Functions/PrintFunction.h"
 #include "Native/Functions/TimeFunction.h"
 #include "Types/NullType.h"

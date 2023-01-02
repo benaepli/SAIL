@@ -4,16 +4,13 @@
 
 namespace sail::Expressions
 {
-    struct Grouping
-        : public Expression
-        , public std::enable_shared_from_this<Grouping>
+    struct Grouping final : public Expression
     {
         std::shared_ptr<Expression> expression;
 
-        void accept(ExpressionVisitor& visitor) override
+        void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) override
         {
-            std::shared_ptr<Grouping> shared = shared_from_this();
-            visitor.visitGroupingExpression(shared);
+            visitor.visitGroupingExpression(*this, shared);
         }
 
         explicit Grouping(std::shared_ptr<Expression> expression)

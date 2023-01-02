@@ -4,17 +4,14 @@
 
 namespace sail::Expressions
 {
-    struct Super
-        : public Expression
-        , public std::enable_shared_from_this<Super>
+    struct Super final : public Expression
     {
         Token keyword;
         Token method;
 
-        void accept(ExpressionVisitor& visitor) override
+        void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) override
         {
-            std::shared_ptr<Super> shared = shared_from_this();
-            visitor.visitSuperExpression(shared);
+            visitor.visitSuperExpression(*this, shared);
         }
 
         Super(Token keyword, Token method)

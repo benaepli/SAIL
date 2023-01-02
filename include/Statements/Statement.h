@@ -19,7 +19,8 @@ namespace sail
         struct While;
     }  // namespace Statements
 
-    // refactor to classes
+    class Statement;
+
     class StatementVisitor
     {
       public:
@@ -28,15 +29,22 @@ namespace sail
 
         SAIL_DEFAULT_COPY_MOVE(StatementVisitor);
 
-        virtual void visitBlockStatement(std::shared_ptr<Statements::Block>& statement) = 0;
-        virtual void visitClassStatement(std::shared_ptr<Statements::Class>& statement) = 0;
-        virtual void visitExpressionStatement(
-            std::shared_ptr<Statements::Expression>& statement) = 0;
-        virtual void visitFunctionStatement(std::shared_ptr<Statements::Function>& statement) = 0;
-        virtual void visitIfStatement(std::shared_ptr<Statements::If>& statement) = 0;
-        virtual void visitReturnStatement(std::shared_ptr<Statements::Return>& statement) = 0;
-        virtual void visitVariableStatement(std::shared_ptr<Statements::Variable>& statement) = 0;
-        virtual void visitWhileStatement(std::shared_ptr<Statements::While>& statement) = 0;
+        virtual void visitBlockStatement(Statements::Block& blockStatement,
+                                         std::shared_ptr<Statement>& shared) = 0;
+        virtual void visitClassStatement(Statements::Class& classStatement,
+                                         std::shared_ptr<Statement>& shared) = 0;
+        virtual void visitExpressionStatement(Statements::Expression& expressionStatement,
+                                              std::shared_ptr<Statement>& shared) = 0;
+        virtual void visitFunctionStatement(Statements::Function& functionStatement,
+                                            std::shared_ptr<Statement>& shared) = 0;
+        virtual void visitIfStatement(Statements::If& ifStatement,
+                                      std::shared_ptr<Statement>& shared) = 0;
+        virtual void visitReturnStatement(Statements::Return& returnStatement,
+                                          std::shared_ptr<Statement>& shared) = 0;
+        virtual void visitVariableStatement(Statements::Variable& variableStatement,
+                                            std::shared_ptr<Statement>& shared) = 0;
+        virtual void visitWhileStatement(Statements::While& whileStatement,
+                                         std::shared_ptr<Statement>& shared) = 0;
     };
 
     class Statement
@@ -47,6 +55,6 @@ namespace sail
 
         SAIL_DEFAULT_COPY_MOVE(Statement);
 
-        virtual void accept(StatementVisitor& visitor) = 0;
+        virtual void accept(StatementVisitor& visitor, std::shared_ptr<Statement>& shared) = 0;
     };
 }  // namespace sail

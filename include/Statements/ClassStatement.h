@@ -7,18 +7,15 @@
 
 namespace sail::Statements
 {
-    struct Class
-        : public Statement
-        , public std::enable_shared_from_this<Class>
+    struct Class final : public Statement
     {
         Token name;
         std::shared_ptr<Expressions::Variable> superclass;
         std::vector<std::shared_ptr<Statements::Function>> methods;
 
-        void accept(StatementVisitor& visitor) override
+        void accept(StatementVisitor& visitor, std::shared_ptr<Statement>& shared) override
         {
-            std::shared_ptr<Class> shared = shared_from_this();
-            visitor.visitClassStatement(shared);
+            visitor.visitClassStatement(*this, shared);
         }
 
         Class(Token name,

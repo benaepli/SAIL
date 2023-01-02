@@ -4,16 +4,13 @@
 
 namespace sail::Expressions
 {
-    struct This
-        : public Expression
-        , public std::enable_shared_from_this<This>
+    struct This final : public Expression
     {
         Token keyword;
 
-        void accept(ExpressionVisitor& visitor) override
+        void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) override
         {
-            std::shared_ptr<This> shared = shared_from_this();
-            visitor.visitThisExpression(shared);
+            visitor.visitThisExpression(*this, shared);
         }
 
         explicit This(Token keyword)

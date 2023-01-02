@@ -7,18 +7,15 @@
 
 namespace sail::Expressions
 {
-    struct Call
-        : public Expression
-        , public std::enable_shared_from_this<Call>
+    struct Call final : public Expression
     {
         std::shared_ptr<Expression> callee;
         Token paren;
         std::vector<std::shared_ptr<Expression>> arguments;
 
-        void accept(ExpressionVisitor& visitor) override
+        void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) override
         {
-            std::shared_ptr<Call> shared = shared_from_this();
-            visitor.visitCallExpression(shared);
+            visitor.visitCallExpression(*this, shared);
         }
 
         Call(std::shared_ptr<Expression> callee,

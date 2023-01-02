@@ -27,38 +27,40 @@ namespace sail
 
     void Resolver::resolve(std::shared_ptr<Statement>& statement)
     {
-        statement->accept(*this);
+        statement->accept(*this, statement);
     }
 
     void Resolver::resolve(std::shared_ptr<Expression>& expression)
     {
-        expression->accept(*this);
+        expression->accept(*this, expression);
     }
 
-    void Resolver::visitBlockStatement(std::shared_ptr<Statements::Block>& block)
+    void Resolver::visitBlockStatement(Statements::Block& blockStatement,
+                                       std::shared_ptr<Statement>& shared)
     {
         beginScope();
-        resolve(block->statements);
+        resolve(blockStatement.statements);
         endScope();
     }
 
-    void Resolver::visitClassStatement(std::shared_ptr<Statements::Class>& classStatement)
+    void Resolver::visitClassStatement(Statements::Class& classStatement,
+                                       std::shared_ptr<Statement>& shared)
     {
         ClassType enclosingClass = _currentClass;
         _currentClass = ClassType::eClass;
 
-        declare(classStatement->name);
-        define(classStatement->name);
+        declare(classStatement.name);
+        define(classStatement.name);
 
-        if (classStatement->superclass != nullptr)
+        if (classStatement.superclass != nullptr)
         {
-            if (classStatement->name.lexeme == classStatement->superclass->name.lexeme)
+            if (classStatement.name.lexeme == classStatement.superclass->name.lexeme)
             {
-                throw RuntimeError(classStatement->superclass->name,
+                throw RuntimeError(classStatement.superclass->name,
                                    "A class cannot inherit from itself");
             }
 
-            std::shared_ptr<Expression> superclass = classStatement->superclass;
+            std::shared_ptr<Expression> superclass = classStatement.superclass;
             resolve(superclass);
 
             _currentClass |= ClassType::eSubclass;
@@ -66,7 +68,7 @@ namespace sail
 
         beginScope();
 
-        for (std::shared_ptr<Statements::Function>& method : classStatement->methods)
+        for (std::shared_ptr<Statements::Function>& method : classStatement.methods)
         {
             FunctionType functionType = FunctionType::eMethod;
             if (method->possibleInitializer)
@@ -74,7 +76,7 @@ namespace sail
                 functionType = FunctionType::eInitializer;
             }
 
-            resolveFunction(method, functionType);
+            resolveFunction(*method, functionType);
         }
 
         endScope();
@@ -82,159 +84,173 @@ namespace sail
         _currentClass = enclosingClass;
     }
 
-    void Resolver::visitExpressionStatement(std::shared_ptr<Statements::Expression>& expression)
+    void Resolver::visitExpressionStatement(Statements::Expression& expressionStatement,
+                                            std::shared_ptr<Statement>& shared)
     {
-        resolve(expression->expression);
+        resolve(expressionStatement.expression);
     }
 
-    void Resolver::visitFunctionStatement(std::shared_ptr<Statements::Function>& function)
+    void Resolver::visitFunctionStatement(Statements::Function& functionStatement,
+                                          std::shared_ptr<Statement>& shared)
     {
-        declare(function->name);
-        define(function->name);
-        resolveFunction(function, FunctionType::eFunction);
+        declare(functionStatement.name);
+        define(functionStatement.name);
+
+        resolveFunction(functionStatement, FunctionType::eFunction);
     }
 
-    void Resolver::visitIfStatement(std::shared_ptr<Statements::If>& ifStatement)
+    void Resolver::visitIfStatement(Statements::If& ifStatement, std::shared_ptr<Statement>& shared)
     {
-        resolve(ifStatement->condition);
-        resolve(ifStatement->thenBranch);
-        if (ifStatement->elseBranch != nullptr)
+        resolve(ifStatement.condition);
+        resolve(ifStatement.thenBranch);
+        if (ifStatement.elseBranch != nullptr)
         {
-            resolve(ifStatement->elseBranch);
+            resolve(ifStatement.elseBranch);
         }
     }
 
-    void Resolver::visitReturnStatement(std::shared_ptr<Statements::Return>& returnStatement)
+    void Resolver::visitReturnStatement(Statements::Return& returnStatement,
+                                        std::shared_ptr<Statement>& shared)
     {
         if (_currentFunction == FunctionType::eNone)
         {
-            throw RuntimeError(returnStatement->keyword, "Cannot return from top-level code.");
+            throw RuntimeError(returnStatement.keyword, "Cannot return from top-level code.");
         }
 
-        if (returnStatement->value != nullptr)
+        if (returnStatement.value != nullptr)
         {
             if (_currentFunction == FunctionType::eInitializer)
             {
-                throw RuntimeError(returnStatement->keyword,
+                throw RuntimeError(returnStatement.keyword,
                                    "Cannot return a value from an initializer.");
             }
 
-            resolve(returnStatement->value);
+            resolve(returnStatement.value);
         }
     }
 
-    void Resolver::visitWhileStatement(std::shared_ptr<Statements::While>& whileStatement)
+    void Resolver::visitWhileStatement(Statements::While& whileStatement,
+                                       std::shared_ptr<Statement>& shared)
     {
-        resolve(whileStatement->condition);
-        resolve(whileStatement->body);
+        resolve(whileStatement.condition);
+        resolve(whileStatement.body);
     }
 
-    void Resolver::visitVariableStatement(std::shared_ptr<Statements::Variable>& variable)
+    void Resolver::visitVariableStatement(Statements::Variable& variableStatement,
+                                          std::shared_ptr<Statement>& shared)
     {
-        declare(variable->name);
-        if (variable->initializer != nullptr)
+        declare(variableStatement.name);
+        if (variableStatement.initializer != nullptr)
         {
-            resolve(variable->initializer);
+            resolve(variableStatement.initializer);
         }
-        define(variable->name);
+        define(variableStatement.name);
     }
 
-    void Resolver::visitAssignmentExpression(std::shared_ptr<Expressions::Assignment>& assignment)
+    void Resolver::visitAssignmentExpression(Expressions::Assignment& assignmentExpression,
+                                             std::shared_ptr<Expression>& shared)
     {
-        resolve(assignment->value);
-
-        std::shared_ptr<Expression> expression = assignment;
-        resolveLocal(expression, assignment->name);
+        resolve(assignmentExpression.value);
+        resolveLocal(shared, assignmentExpression.name);
     }
 
-    void Resolver::visitBinaryExpression(std::shared_ptr<Expressions::Binary>& binary)
+    void Resolver::visitBinaryExpression(Expressions::Binary& binaryExpression,
+                                         std::shared_ptr<Expression>& shared)
     {
-        resolve(binary->left);
-        resolve(binary->right);
+        resolve(binaryExpression.left);
+        resolve(binaryExpression.right);
     }
 
-    void Resolver::visitCallExpression(std::shared_ptr<Expressions::Call>& call)
+    void Resolver::visitCallExpression(Expressions::Call& callExpression,
+                                       std::shared_ptr<Expression>& shared)
     {
-        resolve(call->callee);
-        for (auto& argument : call->arguments)
+        resolve(callExpression.callee);
+
+        for (auto& argument : callExpression.arguments)
         {
             resolve(argument);
         }
     }
 
-    void Resolver::visitGetExpression(std::shared_ptr<Expressions::Get>& get)
+    void Resolver::visitGetExpression(Expressions::Get& getExpression,
+                                      std::shared_ptr<Expression>& shared)
     {
-        resolve(get->object);
+        resolve(getExpression.object);
     }
 
-    void Resolver::visitGroupingExpression(std::shared_ptr<Expressions::Grouping>& grouping)
+    void Resolver::visitGroupingExpression(Expressions::Grouping& groupingExpression,
+                                           std::shared_ptr<Expression>& shared)
     {
-        resolve(grouping->expression);
+        resolve(groupingExpression.expression);
     }
 
-    void Resolver::visitLiteralExpression(std::shared_ptr<Expressions::Literal>& literal)
+    void Resolver::visitLiteralExpression(Expressions::Literal& literalExpression,
+                                          std::shared_ptr<Expression>& shared)
     {
-        // Do nothing
     }
 
-    void Resolver::visitLogicalExpression(std::shared_ptr<Expressions::Logical>& logical)
+    void Resolver::visitLogicalExpression(Expressions::Logical& logicalExpression,
+                                          std::shared_ptr<Expression>& shared)
     {
-        resolve(logical->left);
-        resolve(logical->right);
+        resolve(logicalExpression.left);
+        resolve(logicalExpression.right);
     }
 
-    void Resolver::visitSetExpression(std::shared_ptr<Expressions::Set>& set)
+    void Resolver::visitSetExpression(Expressions::Set& setExpression,
+                                      std::shared_ptr<Expression>& shared)
     {
-        resolve(set->value);
-        resolve(set->object);
+        resolve(setExpression.value);
+        resolve(setExpression.object);
     }
 
-    void Resolver::visitSuperExpression(std::shared_ptr<Expressions::Super>& super)
+    void Resolver::visitSuperExpression(Expressions::Super& superExpression,
+                                        std::shared_ptr<Expression>& shared)
     {
         const bool isInClass = static_cast<bool>(_currentClass & ClassType::eClass);
         if (!isInClass)
         {
-            throw RuntimeError(super->keyword, "Cannot use 'super' outside of a class.");
+            throw RuntimeError(superExpression.keyword, "Cannot use 'super' outside of a class.");
         }
 
         const bool isInSubclass = static_cast<bool>(_currentClass & ClassType::eSubclass);
         if (!isInSubclass)
         {
-            throw RuntimeError(super->keyword, "Cannot use 'super' in a class with no superclass.");
+            throw RuntimeError(superExpression.keyword,
+                               "Cannot use 'super' in a class with no superclass.");
         }
 
-        std::shared_ptr<Expression> expression = super;
-        resolveLocal(expression, super->keyword);
+        resolveLocal(shared, superExpression.keyword);
     }
 
-    void Resolver::visitThisExpression(std::shared_ptr<Expressions::This>& thisExpr)
+    void Resolver::visitThisExpression(Expressions::This& thisExpression,
+                                       std::shared_ptr<Expression>& shared)
     {
         const bool isInClass = static_cast<bool>(_currentClass & ClassType::eClass);
         if (!isInClass)
         {
-            throw RuntimeError(thisExpr->keyword, "Cannot use 'this' outside of a class.");
+            throw RuntimeError(thisExpression.keyword, "Cannot use 'this' outside of a class.");
         }
 
-        std::shared_ptr<Expression> expression = thisExpr;
-        resolveLocal(expression, thisExpr->keyword);
+        resolveLocal(shared, thisExpression.keyword);
     }
 
-    void Resolver::visitUnaryExpression(std::shared_ptr<Expressions::Unary>& unary)
+    void Resolver::visitUnaryExpression(Expressions::Unary& unaryExpression,
+                                        std::shared_ptr<Expression>& shared)
     {
-        resolve(unary->right);
+        resolve(unaryExpression.right);
     }
 
-    void Resolver::visitVariableExpression(std::shared_ptr<Expressions::Variable>& variable)
+    void Resolver::visitVariableExpression(Expressions::Variable& variableExpression,
+                                           std::shared_ptr<Expression>& shared)
     {
-        if (!_scopes.empty() && _scopes.back().contains(variable->name.lexeme)
-            && !_scopes.back()[variable->name.lexeme])
+        if (!_scopes.empty() && _scopes.back().contains(variableExpression.name.lexeme)
+            && !_scopes.back()[variableExpression.name.lexeme])
         {
-            throw RuntimeError(variable->name,
+            throw RuntimeError(variableExpression.name,
                                "Cannot read local variable in its own initializer.");
         }
 
-        std::shared_ptr<Expression> expression = variable;
-        resolveLocal(expression, variable->name);
+        resolveLocal(shared, variableExpression.name);
     }
 
     void Resolver::beginScope()
@@ -285,14 +301,13 @@ namespace sail
         }
     }
 
-    void Resolver::resolveFunction(std::shared_ptr<Statements::Function>& function,
-                                   FunctionType type)
+    void Resolver::resolveFunction(Statements::Function& function, FunctionType type)
     {
         FunctionType enclosingFunction = _currentFunction;
         _currentFunction = type;
 
         beginScope();
-        for (Token& param : function->parameters)
+        for (Token& param : function.parameters)
         {
             declare(param);
             define(param);
@@ -309,7 +324,7 @@ namespace sail
             }
         }
 
-        resolve(function->body);
+        resolve(function.body);
         endScope();
 
         _currentFunction = enclosingFunction;

@@ -23,6 +23,8 @@ namespace sail
         struct Variable;
     }  // namespace Expressions
 
+    class Expression;
+
     class ExpressionVisitor
     {
       public:
@@ -31,21 +33,30 @@ namespace sail
 
         SAIL_DEFAULT_COPY_MOVE(ExpressionVisitor);
 
-        virtual void visitAssignmentExpression(
-            std::shared_ptr<Expressions::Assignment>& expression) = 0;
-        virtual void visitBinaryExpression(std::shared_ptr<Expressions::Binary>& expression) = 0;
-        virtual void visitCallExpression(std::shared_ptr<Expressions::Call>& expression) = 0;
-        virtual void visitGetExpression(std::shared_ptr<Expressions::Get>& expression) = 0;
-        virtual void visitGroupingExpression(
-            std::shared_ptr<Expressions::Grouping>& expression) = 0;
-        virtual void visitLiteralExpression(std::shared_ptr<Expressions::Literal>& expression) = 0;
-        virtual void visitLogicalExpression(std::shared_ptr<Expressions::Logical>& expression) = 0;
-        virtual void visitSetExpression(std::shared_ptr<Expressions::Set>& expression) = 0;
-        virtual void visitSuperExpression(std::shared_ptr<Expressions::Super>& expression) = 0;
-        virtual void visitThisExpression(std::shared_ptr<Expressions::This>& expression) = 0;
-        virtual void visitUnaryExpression(std::shared_ptr<Expressions::Unary>& expression) = 0;
-        virtual void visitVariableExpression(
-            std::shared_ptr<Expressions::Variable>& expression) = 0;
+        virtual void visitAssignmentExpression(Expressions::Assignment& expression,
+                                               std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitBinaryExpression(Expressions::Binary& expression,
+                                           std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitCallExpression(Expressions::Call& expression,
+                                         std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitGetExpression(Expressions::Get& expression,
+                                        std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitGroupingExpression(Expressions::Grouping& expression,
+                                             std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitLiteralExpression(Expressions::Literal& expression,
+                                            std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitLogicalExpression(Expressions::Logical& expression,
+                                            std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitSetExpression(Expressions::Set& expression,
+                                        std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitSuperExpression(Expressions::Super& expression,
+                                          std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitThisExpression(Expressions::This& expression,
+                                         std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitUnaryExpression(Expressions::Unary& expression,
+                                          std::shared_ptr<Expression>& shared) = 0;
+        virtual void visitVariableExpression(Expressions::Variable& expression,
+                                             std::shared_ptr<Expression>& shared) = 0;
     };
 
     class Expression
@@ -56,7 +67,7 @@ namespace sail
 
         SAIL_DEFAULT_COPY_MOVE(Expression);
 
-        virtual void accept(ExpressionVisitor& visitor) = 0;
+        virtual void accept(ExpressionVisitor& visitor, std::shared_ptr<Expression>& shared) = 0;
     };
 
 }  // namespace sail

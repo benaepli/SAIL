@@ -3,9 +3,10 @@
 
 #include "Instance/Instance.h"
 
+
 auto main(const int argc, const char* argv[]) -> int
 {
-    sail::Instance instance {};
+    sail::Instance instance{};
 
     if (argc > 2)
     {
